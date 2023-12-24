@@ -194,7 +194,9 @@ impl TextEditor {
 
                         match key.code {
                             KeyCode::Char('h') | KeyCode::Left => {
-                                if self.cursor.x == 0 {
+                                let true_cursor_x = self.true_cursor_x();
+
+                                if true_cursor_x == 0 {
                                     if self.cursor.y != 0 {
                                         self.cursor.y -= 1;
                                         self.cursor.x = self
@@ -205,7 +207,7 @@ impl TextEditor {
                                             as u64;
                                     }
                                 } else {
-                                    self.cursor.x -= 1;
+                                    self.cursor.x = true_cursor_x.saturating_sub(1);
                                 }
                             }
                             KeyCode::Char('j') | KeyCode::Down => {
