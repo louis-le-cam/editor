@@ -1,13 +1,14 @@
 use std::{
     fs::File,
     io::{self, BufRead},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use editor_terminal::{Color, Event, KeyCode, KeyEventKind, TermRect, TermSlice, TermVec};
 use glam::{u16vec2, U64Vec2};
 
 pub struct TextEditor {
+    path: PathBuf,
     lines: Vec<String>,
     cursor: U64Vec2,
     offset: U64Vec2,
@@ -15,6 +16,7 @@ pub struct TextEditor {
 impl TextEditor {
     pub fn from_path(path: impl AsRef<Path>) -> Self {
         Self {
+            path: path.as_ref().to_path_buf(),
             lines: io::BufReader::new(File::open(path).unwrap())
                 .lines()
                 .collect::<Result<_, _>>()
@@ -25,13 +27,21 @@ impl TextEditor {
     }
 
     pub fn draw(&mut self, mut term: TermSlice) {
-        let gutter_width = (self.lines.len().checked_ilog10().unwrap_or(0) + 3) as u16;
+        let gutter_width = (number_width(self.lines.len() as u64) + 2) as u16;
 
-        self.draw_gutter(term.slice(TermRect::new((0, 0), (gutter_width, term.rect().heigth()))));
+        self.draw_gutter(term.slice(TermRect::new(
+            (0, 0),
+            (gutter_width, term.rect().heigth().saturating_sub(1)),
+        )));
+
+        self.draw_infos(term.slice(TermRect::new(
+            (0, term.rect().heigth().saturating_sub(1)),
+            (term.rect().width(), 1),
+        )));
 
         self.draw_code(term.slice(TermRect::new(
             (gutter_width, 0),
-            term.rect().size.saturating_sub(u16vec2(gutter_width, 0)),
+            term.rect().size.saturating_sub(u16vec2(gutter_width, 1)),
         )));
     }
 
@@ -61,6 +71,22 @@ impl TextEditor {
 
             term.write_to((0, y), &line_number);
         }
+    }
+
+    fn draw_infos(&mut self, mut term: TermSlice) {
+        let path = self.path.display().to_string();
+
+        term.write_to(
+            (0, 0),
+            &format!(
+                " {} {:>width$}:{} ",
+                path,
+                self.cursor.y + 1,
+                self.cursor.x + 1,
+                width = (term.rect().width() as usize)
+                    .saturating_sub(path.len() + number_width(self.cursor.x + 1) as usize + 4)
+            ),
+        );
     }
 
     fn draw_code(&mut self, mut term: TermSlice) {
@@ -172,4 +198,8 @@ impl TextEditor {
             self.offset.y = self.cursor.y.saturating_sub(4);
         }
     }
+}
+
+fn number_width(number: u64) -> u32 {
+    number.checked_ilog10().unwrap_or(0) + 1
 }
