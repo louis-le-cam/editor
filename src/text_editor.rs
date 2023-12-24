@@ -12,6 +12,7 @@ use crate::{mode::Mode, theme::Theme};
 pub struct TextEditor {
     path: PathBuf,
     lines: Vec<String>,
+    dirty: bool,
     mode: Mode,
     cursor: U64Vec2,
     offset: U64Vec2,
@@ -24,6 +25,7 @@ impl TextEditor {
                 .lines()
                 .collect::<Result<_, _>>()
                 .unwrap(),
+            dirty: false,
             mode: Mode::Normal,
             cursor: (0, 0).into(),
             offset: (0, 0).into(),
@@ -107,16 +109,20 @@ impl TextEditor {
         term.write_to(
             (0, 0),
             &format!(
-                " {} {} {:>width$}:{} ",
+                " {} {} {} {:>width$}:{} ",
                 mode_abreviation,
                 path,
+                match self.dirty {
+                    true => "[+]",
+                    false => "   ",
+                },
                 self.cursor.y + 1,
                 self.cursor.x + 1,
                 width = (term.rect().width() as usize).saturating_sub(
                     mode_abreviation.len()
                         + path.len()
                         + number_width(self.cursor.x + 1) as usize
-                        + 5
+                        + 8
                 )
             ),
         );
@@ -226,6 +232,7 @@ impl TextEditor {
 
                                     self.cursor.x += 1;
                                     line.insert(index, ch);
+                                    self.dirty = true;
                                 }
                             }
                             KeyCode::Esc => {
