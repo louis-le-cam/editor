@@ -7,11 +7,12 @@ use std::{
 use editor_terminal::{Color, Event, KeyCode, KeyEventKind, TermRect, TermSlice, TermVec};
 use glam::{u16vec2, U64Vec2};
 
-use crate::theme::Theme;
+use crate::{mode::Mode, theme::Theme};
 
 pub struct TextEditor {
     path: PathBuf,
     lines: Vec<String>,
+    mode: Mode,
     cursor: U64Vec2,
     offset: U64Vec2,
 }
@@ -23,6 +24,7 @@ impl TextEditor {
                 .lines()
                 .collect::<Result<_, _>>()
                 .unwrap(),
+            mode: Mode::Normal,
             cursor: (0, 0).into(),
             offset: (0, 0).into(),
         }
@@ -95,6 +97,8 @@ impl TextEditor {
     }
 
     fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice) {
+        let mode_abreviation = self.mode.abreviation();
+
         let path = self.path.display().to_string();
 
         term.set_background_color(theme.code_info_background);
@@ -103,12 +107,17 @@ impl TextEditor {
         term.write_to(
             (0, 0),
             &format!(
-                " {} {:>width$}:{} ",
+                " {} {} {:>width$}:{} ",
+                mode_abreviation,
                 path,
                 self.cursor.y + 1,
                 self.cursor.x + 1,
-                width = (term.rect().width() as usize)
-                    .saturating_sub(path.len() + number_width(self.cursor.x + 1) as usize + 4)
+                width = (term.rect().width() as usize).saturating_sub(
+                    mode_abreviation.len()
+                        + path.len()
+                        + number_width(self.cursor.x + 1) as usize
+                        + 5
+                )
             ),
         );
 
@@ -167,20 +176,14 @@ impl TextEditor {
     }
 
     pub fn event(&mut self, theme: &Theme, term: TermSlice, event: &Event) {
+        let mut need_redraw = false;
+
         match event {
-            Event::Key(key) => {
-                if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                    if matches!(
-                        key.code,
-                        KeyCode::Left
-                            | KeyCode::Right
-                            | KeyCode::Up
-                            | KeyCode::Down
-                            | KeyCode::Char('h')
-                            | KeyCode::Char('j')
-                            | KeyCode::Char('k')
-                            | KeyCode::Char('l')
-                    ) {
+            Event::Key(key) => match self.mode {
+                Mode::Normal => {
+                    if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
+                        need_redraw = true;
+
                         match key.code {
                             KeyCode::Char('h') | KeyCode::Left => {
                                 self.cursor.x = self.cursor.x.saturating_sub(1)
@@ -194,21 +197,50 @@ impl TextEditor {
                             KeyCode::Char('l') | KeyCode::Right => {
                                 self.cursor.x = self.cursor.x.saturating_add(1)
                             }
-                            _ => {}
+                            KeyCode::Char('i') => self.mode = Mode::Insert,
+                            _ => need_redraw = false,
                         }
 
-                        let gutter_width =
-                            (self.lines.len().checked_ilog10().unwrap_or(0) + 3) as u16;
+                        if need_redraw {
+                            let gutter_width =
+                                (self.lines.len().checked_ilog10().unwrap_or(0) + 3) as u16;
 
-                        self.update_offset(
-                            term.rect().size.saturating_sub(u16vec2(gutter_width, 0)),
-                        );
-
-                        self.draw(theme, term);
+                            self.update_offset(
+                                term.rect().size.saturating_sub(u16vec2(gutter_width, 0)),
+                            );
+                        }
                     }
                 }
-            }
+                Mode::Insert => {
+                    if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
+                        need_redraw = true;
+
+                        match key.code {
+                            KeyCode::Char(ch) => {
+                                if let Some(line) = self.lines.get_mut(self.cursor.y as usize) {
+                                    let index = line
+                                        .char_indices()
+                                        .nth(self.cursor.x as usize)
+                                        .map(|(i, _)| i)
+                                        .unwrap_or(line.len());
+
+                                    self.cursor.x += 1;
+                                    line.insert(index, ch);
+                                }
+                            }
+                            KeyCode::Esc => {
+                                self.mode = Mode::Normal;
+                            }
+                            _ => need_redraw = false,
+                        }
+                    }
+                }
+            },
             _ => {}
+        }
+
+        if need_redraw {
+            self.draw(theme, term);
         }
     }
 
