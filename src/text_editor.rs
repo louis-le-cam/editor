@@ -137,11 +137,13 @@ impl TextEditor {
         term.set_background_color(theme.code_background);
         term.set_text_color(theme.code_text);
 
+        let true_cursor_x = self.true_cursor_x();
+
         for y in 0..size.y {
             let line = self
                 .lines
                 .get(y as usize + self.offset.y as usize)
-                .map(|line| line.as_str())
+                .map(String::as_str)
                 .unwrap_or("");
 
             let mut chars = line
@@ -150,9 +152,9 @@ impl TextEditor {
                 .chain(" ".chars().cycle());
 
             if y as i64 == self.cursor.y as i64 - self.offset.y as i64 {
-                let before_cursor_len = self.cursor.x.saturating_sub(self.offset.x) as usize;
+                let before_cursor_len = true_cursor_x.saturating_sub(self.offset.x) as usize;
 
-                if self.cursor.x >= self.offset.x {
+                if true_cursor_x >= self.offset.x {
                     let before_cursor = (0..before_cursor_len)
                         .filter_map(|_| chars.next())
                         .collect::<String>();
@@ -192,16 +194,47 @@ impl TextEditor {
 
                         match key.code {
                             KeyCode::Char('h') | KeyCode::Left => {
-                                self.cursor.x = self.cursor.x.saturating_sub(1)
+                                if self.cursor.x == 0 {
+                                    if self.cursor.y != 0 {
+                                        self.cursor.y -= 1;
+                                        self.cursor.x = self
+                                            .lines
+                                            .get(self.cursor.y as usize)
+                                            .map(String::len)
+                                            .unwrap_or(0)
+                                            as u64;
+                                    }
+                                } else {
+                                    self.cursor.x -= 1;
+                                }
                             }
                             KeyCode::Char('j') | KeyCode::Down => {
-                                self.cursor.y = self.cursor.y.saturating_add(1)
+                                if self.cursor.y >= self.lines.len() as u64 {
+                                    self.cursor.y = self.lines.len() as u64;
+                                } else {
+                                    self.cursor.y = self.cursor.y.saturating_add(1);
+                                }
                             }
                             KeyCode::Char('k') | KeyCode::Up => {
                                 self.cursor.y = self.cursor.y.saturating_sub(1)
                             }
                             KeyCode::Char('l') | KeyCode::Right => {
-                                self.cursor.x = self.cursor.x.saturating_add(1)
+                                if self.cursor.x
+                                    >= self
+                                        .lines
+                                        .get(self.cursor.y as usize)
+                                        .map(String::len)
+                                        .unwrap_or(0) as u64
+                                {
+                                    self.cursor.x = 0;
+                                    if self.cursor.y > self.lines.len() as u64 {
+                                        self.cursor.y = self.lines.len() as u64;
+                                    } else {
+                                        self.cursor.y = self.cursor.y.saturating_add(1);
+                                    }
+                                } else {
+                                    self.cursor.x = self.cursor.x.saturating_add(1)
+                                }
                             }
                             KeyCode::Char('i') => self.mode = Mode::Insert,
                             _ => need_redraw = false,
@@ -223,14 +256,16 @@ impl TextEditor {
 
                         match key.code {
                             KeyCode::Char(ch) => {
+                                let true_cursor_x = self.true_cursor_x();
+
                                 if let Some(line) = self.lines.get_mut(self.cursor.y as usize) {
                                     let index = line
                                         .char_indices()
-                                        .nth(self.cursor.x as usize)
+                                        .nth(true_cursor_x as usize)
                                         .map(|(i, _)| i)
                                         .unwrap_or(line.len());
 
-                                    self.cursor.x += 1;
+                                    self.cursor.x = true_cursor_x + 1;
                                     line.insert(index, ch);
                                     self.dirty = true;
                                 }
@@ -268,6 +303,13 @@ impl TextEditor {
         if self.cursor.y < self.offset.y + 4 {
             self.offset.y = self.cursor.y.saturating_sub(4);
         }
+    }
+
+    fn true_cursor_x(&self) -> u64 {
+        self.lines
+            .get(self.cursor.y as usize)
+            .map(|line| self.cursor.x.min(line.len() as u64))
+            .unwrap_or(0)
     }
 }
 
