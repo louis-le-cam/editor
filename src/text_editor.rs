@@ -7,6 +7,8 @@ use std::{
 use editor_terminal::{Color, Event, KeyCode, KeyEventKind, TermRect, TermSlice, TermVec};
 use glam::{u16vec2, U64Vec2};
 
+use crate::theme::Theme;
+
 pub struct TextEditor {
     path: PathBuf,
     lines: Vec<String>,
@@ -26,30 +28,45 @@ impl TextEditor {
         }
     }
 
-    pub fn draw(&mut self, mut term: TermSlice) {
+    pub fn draw(&mut self, theme: &Theme, mut term: TermSlice) {
         let gutter_width = (number_width(self.lines.len() as u64) + 2) as u16;
 
-        self.draw_gutter(term.slice(TermRect::new(
-            (0, 0),
-            (gutter_width, term.rect().heigth().saturating_sub(1)),
-        )));
+        self.draw_gutter(
+            theme,
+            term.slice(TermRect::new(
+                (0, 0),
+                (gutter_width, term.rect().heigth().saturating_sub(1)),
+            )),
+        );
 
-        self.draw_infos(term.slice(TermRect::new(
-            (0, term.rect().heigth().saturating_sub(1)),
-            (term.rect().width(), 1),
-        )));
+        self.draw_infos(
+            theme,
+            term.slice(TermRect::new(
+                (0, term.rect().heigth().saturating_sub(1)),
+                (term.rect().width(), 1),
+            )),
+        );
 
-        self.draw_code(term.slice(TermRect::new(
-            (gutter_width, 0),
-            term.rect().size.saturating_sub(u16vec2(gutter_width, 1)),
-        )));
+        self.draw_code(
+            theme,
+            term.slice(TermRect::new(
+                (gutter_width, 0),
+                term.rect().size.saturating_sub(u16vec2(gutter_width, 1)),
+            )),
+        );
     }
 
-    fn draw_gutter(&mut self, mut term: TermSlice) {
+    fn draw_gutter(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
 
         for y in 0..size.y {
             let line = self.offset.y + y as u64;
+
+            if line == self.cursor.y {
+                term.set_text_color(theme.gutter_current_line);
+            } else {
+                term.set_text_color(theme.gutter_line);
+            }
 
             let line_number = match line {
                 _ if line < self.lines.len() as u64 => {
@@ -59,6 +76,7 @@ impl TextEditor {
                         width = size.x.saturating_sub(2) as usize
                     )
                 }
+
                 _ if line == self.lines.len() as u64 => {
                     format!(
                         " {: >width$} ",
@@ -69,12 +87,18 @@ impl TextEditor {
                 _ => " ".repeat(size.x as usize),
             };
 
+            term.set_background_color(theme.gutter_background);
             term.write_to((0, y), &line_number);
+            term.reset_text_color();
+            term.reset_background_color();
         }
     }
 
-    fn draw_infos(&mut self, mut term: TermSlice) {
+    fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice) {
         let path = self.path.display().to_string();
+
+        term.set_background_color(theme.code_info_background);
+        term.set_text_color(theme.code_info_text);
 
         term.write_to(
             (0, 0),
@@ -87,10 +111,16 @@ impl TextEditor {
                     .saturating_sub(path.len() + number_width(self.cursor.x + 1) as usize + 4)
             ),
         );
+
+        term.reset_background_color();
+        term.reset_text_color();
     }
 
-    fn draw_code(&mut self, mut term: TermSlice) {
+    fn draw_code(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
+
+        term.set_background_color(theme.code_background);
+        term.set_text_color(theme.code_text);
 
         for y in 0..size.y {
             let line = self
@@ -116,9 +146,11 @@ impl TextEditor {
 
                     let at_cursor = chars.next().map(|ch| ch.to_string()).unwrap();
 
-                    term.set_background_color(Color::Red);
+                    term.set_background_color(theme.cursor);
+                    term.set_text_color(Color::Black);
                     term.write_to((before_cursor_len as u16, y), &at_cursor);
-                    term.set_background_color(Color::Reset);
+                    term.set_background_color(theme.code_background);
+                    term.set_text_color(theme.code_text);
 
                     let after_cursor = chars
                         .take((size.x as usize).saturating_sub(before_cursor_len + 1))
@@ -134,7 +166,7 @@ impl TextEditor {
         }
     }
 
-    pub fn event(&mut self, term: TermSlice, event: &Event) {
+    pub fn event(&mut self, theme: &Theme, term: TermSlice, event: &Event) {
         match event {
             Event::Key(key) => {
                 if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
@@ -172,7 +204,7 @@ impl TextEditor {
                             term.rect().size.saturating_sub(u16vec2(gutter_width, 0)),
                         );
 
-                        self.draw(term);
+                        self.draw(theme, term);
                     }
                 }
             }
