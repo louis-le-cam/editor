@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 editor_terminal = { path = "crates/editor_terminal" }
+editor_document = { path = "crates/editor_document" }
 log = "0.4.20"
 fern = "0.6.2"
 log-panics = "2.1.0"

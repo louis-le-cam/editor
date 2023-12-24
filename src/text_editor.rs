@@ -1,39 +1,27 @@
-use std::{
-    fs::File,
-    io::{self, BufRead},
-    path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
+use editor_document::Document;
 use editor_terminal::{Color, Event, KeyCode, KeyEventKind, TermRect, TermSlice, TermVec};
 use glam::{u16vec2, U64Vec2};
 
 use crate::{mode::Mode, theme::Theme};
 
 pub struct TextEditor {
-    path: PathBuf,
-    lines: Vec<String>,
-    dirty: bool,
+    document: Document,
     mode: Mode,
-    cursor: U64Vec2,
     offset: U64Vec2,
 }
 impl TextEditor {
-    pub fn from_path(path: impl AsRef<Path>) -> Self {
+    pub fn from_path(path: PathBuf) -> Self {
         Self {
-            path: path.as_ref().to_path_buf(),
-            lines: io::BufReader::new(File::open(path).unwrap())
-                .lines()
-                .collect::<Result<_, _>>()
-                .unwrap(),
-            dirty: false,
+            document: Document::from_path(path),
             mode: Mode::Normal,
-            cursor: (0, 0).into(),
             offset: (0, 0).into(),
         }
     }
 
     pub fn draw(&mut self, theme: &Theme, mut term: TermSlice) {
-        let gutter_width = (number_width(self.lines.len() as u64) + 2) as u16;
+        let gutter_width = (number_width(self.document.lines().len() as u64) + 2) as u16;
 
         self.draw_gutter(
             theme,
@@ -66,14 +54,14 @@ impl TextEditor {
         for y in 0..size.y {
             let line = self.offset.y + y as u64;
 
-            if line == self.cursor.y {
+            if line == self.document.cursor().y {
                 term.set_text_color(theme.gutter_current_line);
             } else {
                 term.set_text_color(theme.gutter_line);
             }
 
             let line_number = match line {
-                _ if line < self.lines.len() as u64 => {
+                _ if line < self.document.lines().len() as u64 => {
                     format!(
                         " {: >width$} ",
                         line + 1,
@@ -81,7 +69,7 @@ impl TextEditor {
                     )
                 }
 
-                _ if line == self.lines.len() as u64 => {
+                _ if line == self.document.lines().len() as u64 => {
                     format!(
                         " {: >width$} ",
                         '~',
@@ -101,7 +89,7 @@ impl TextEditor {
     fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice) {
         let mode_abreviation = self.mode.abreviation();
 
-        let path = self.path.display().to_string();
+        let path = self.document.path().display().to_string();
 
         term.set_background_color(theme.code_info_background);
         term.set_text_color(theme.code_info_text);
@@ -112,16 +100,16 @@ impl TextEditor {
                 " {} {} {} {:>width$}:{} ",
                 mode_abreviation,
                 path,
-                match self.dirty {
+                match self.document.dirty() {
                     true => "[+]",
                     false => "   ",
                 },
-                self.cursor.y + 1,
-                self.cursor.x + 1,
+                self.document.cursor().y + 1,
+                self.document.cursor().x + 1,
                 width = (term.rect().width() as usize).saturating_sub(
                     mode_abreviation.len()
                         + path.len()
-                        + number_width(self.cursor.x + 1) as usize
+                        + number_width(self.document.cursor().x + 1) as usize
                         + 8
                 )
             ),
@@ -141,7 +129,8 @@ impl TextEditor {
 
         for y in 0..size.y {
             let line = self
-                .lines
+                .document
+                .lines()
                 .get(y as usize + self.offset.y as usize)
                 .map(String::as_str)
                 .unwrap_or("");
@@ -151,7 +140,7 @@ impl TextEditor {
                 .skip(self.offset.x as usize)
                 .chain(" ".chars().cycle());
 
-            if y as i64 == self.cursor.y as i64 - self.offset.y as i64 {
+            if y as i64 == self.document.cursor().y as i64 - self.offset.y as i64 {
                 let before_cursor_len = true_cursor_x.saturating_sub(self.offset.x) as usize;
 
                 if true_cursor_x >= self.offset.x {
@@ -193,58 +182,18 @@ impl TextEditor {
                         need_redraw = true;
 
                         match key.code {
-                            KeyCode::Char('h') | KeyCode::Left => {
-                                let true_cursor_x = self.true_cursor_x();
-
-                                if true_cursor_x == 0 {
-                                    if self.cursor.y != 0 {
-                                        self.cursor.y -= 1;
-                                        self.cursor.x = self
-                                            .lines
-                                            .get(self.cursor.y as usize)
-                                            .map(String::len)
-                                            .unwrap_or(0)
-                                            as u64;
-                                    }
-                                } else {
-                                    self.cursor.x = true_cursor_x.saturating_sub(1);
-                                }
-                            }
-                            KeyCode::Char('j') | KeyCode::Down => {
-                                if self.cursor.y >= self.lines.len() as u64 {
-                                    self.cursor.y = self.lines.len() as u64;
-                                } else {
-                                    self.cursor.y = self.cursor.y.saturating_add(1);
-                                }
-                            }
-                            KeyCode::Char('k') | KeyCode::Up => {
-                                self.cursor.y = self.cursor.y.saturating_sub(1)
-                            }
-                            KeyCode::Char('l') | KeyCode::Right => {
-                                if self.cursor.x
-                                    >= self
-                                        .lines
-                                        .get(self.cursor.y as usize)
-                                        .map(String::len)
-                                        .unwrap_or(0) as u64
-                                {
-                                    self.cursor.x = 0;
-                                    if self.cursor.y > self.lines.len() as u64 {
-                                        self.cursor.y = self.lines.len() as u64;
-                                    } else {
-                                        self.cursor.y = self.cursor.y.saturating_add(1);
-                                    }
-                                } else {
-                                    self.cursor.x = self.cursor.x.saturating_add(1)
-                                }
-                            }
+                            KeyCode::Char('h') | KeyCode::Left => self.document.move_left(),
+                            KeyCode::Char('j') | KeyCode::Down => self.document.move_down(),
+                            KeyCode::Char('k') | KeyCode::Up => self.document.move_up(),
+                            KeyCode::Char('l') | KeyCode::Right => self.document.move_right(),
                             KeyCode::Char('i') => self.mode = Mode::Insert,
                             _ => need_redraw = false,
                         }
 
                         if need_redraw {
                             let gutter_width =
-                                (self.lines.len().checked_ilog10().unwrap_or(0) + 3) as u16;
+                                (self.document.lines().len().checked_ilog10().unwrap_or(0) + 3)
+                                    as u16;
 
                             self.update_offset(
                                 term.rect().size.saturating_sub(u16vec2(gutter_width, 0)),
@@ -257,24 +206,8 @@ impl TextEditor {
                         need_redraw = true;
 
                         match key.code {
-                            KeyCode::Char(ch) => {
-                                let true_cursor_x = self.true_cursor_x();
-
-                                if let Some(line) = self.lines.get_mut(self.cursor.y as usize) {
-                                    let index = line
-                                        .char_indices()
-                                        .nth(true_cursor_x as usize)
-                                        .map(|(i, _)| i)
-                                        .unwrap_or(line.len());
-
-                                    self.cursor.x = true_cursor_x + 1;
-                                    line.insert(index, ch);
-                                    self.dirty = true;
-                                }
-                            }
-                            KeyCode::Esc => {
-                                self.mode = Mode::Normal;
-                            }
+                            KeyCode::Char(ch) => self.document.insert(ch),
+                            KeyCode::Esc => self.mode = Mode::Normal,
                             _ => need_redraw = false,
                         }
                     }
@@ -288,29 +221,30 @@ impl TextEditor {
         }
     }
 
-    /// Update `self.offset` if `self.cursor` is near edges
+    /// Update `self.offset` if `self.document.cursor()` is near edges
     fn update_offset(&mut self, size: TermVec) {
-        if self.cursor.x + 7 > self.offset.x + size.x as u64 {
-            self.offset.x = (self.cursor.x + 7).saturating_sub(size.x as u64);
+        if self.document.cursor().x + 7 > self.offset.x + size.x as u64 {
+            self.offset.x = (self.document.cursor().x + 7).saturating_sub(size.x as u64);
         }
 
-        if self.cursor.y + 4 > self.offset.y + size.y as u64 {
-            self.offset.y = (self.cursor.y + 4).saturating_sub(size.y as u64);
+        if self.document.cursor().y + 4 > self.offset.y + size.y as u64 {
+            self.offset.y = (self.document.cursor().y + 4).saturating_sub(size.y as u64);
         }
 
-        if self.cursor.x < self.offset.x + 5 {
-            self.offset.x = self.cursor.x.saturating_sub(5);
+        if self.document.cursor().x < self.offset.x + 5 {
+            self.offset.x = self.document.cursor().x.saturating_sub(5);
         }
 
-        if self.cursor.y < self.offset.y + 4 {
-            self.offset.y = self.cursor.y.saturating_sub(4);
+        if self.document.cursor().y < self.offset.y + 4 {
+            self.offset.y = self.document.cursor().y.saturating_sub(4);
         }
     }
 
     fn true_cursor_x(&self) -> u64 {
-        self.lines
-            .get(self.cursor.y as usize)
-            .map(|line| self.cursor.x.min(line.len() as u64))
+        self.document
+            .lines()
+            .get(self.document.cursor().y as usize)
+            .map(|line| self.document.cursor().x.min(line.len() as u64))
             .unwrap_or(0)
     }
 }

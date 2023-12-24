@@ -13,7 +13,7 @@ impl App {
         Self {
             term: Term::new(),
             theme: Theme::default(),
-            text_editor: TextEditor::from_path("log.txt"),
+            text_editor: TextEditor::from_path("log.txt".into()),
         }
     }
 
@@ -45,7 +45,11 @@ impl App {
                 _ => {}
             }
 
-            self.text_editor.event(&self.theme, self.term.slice(TermRect::new((0, 0), term_size)), &event);
+            self.text_editor.event(
+                &self.theme,
+                self.term.slice(TermRect::new((0, 0), term_size)),
+                &event,
+            );
             self.term.flush();
         }
     }
