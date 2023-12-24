@@ -1,0 +1,11 @@
+[package]
+name = "editor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+editor_terminal = { path = "crates/editor_terminal" }
+log = "0.4.20"
+fern = "0.6.2"
+log-panics = "2.1.0"
+glam = "0.25.0"
