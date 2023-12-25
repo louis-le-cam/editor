@@ -137,20 +137,20 @@ impl Document {
 /// Editing
 impl Document {
     pub fn insert(&mut self, ch: char) {
-        let true_cursor_x = self.true_cursor_x();
+        let true_cursor = self.true_cursor();
 
-        if let Some(line) = self.lines.get_mut(self.cursor.y as usize) {
-            let index = line
-                .char_indices()
-                .nth(true_cursor_x as usize)
-                .map(|(i, _)| i)
-                .unwrap_or(line.len());
+        let line = self.get_line_mut(true_cursor.y as usize);
 
-            self.cursor.x = true_cursor_x + 1;
-            line.insert(index, ch);
+        let index = line
+            .char_indices()
+            .nth(true_cursor.x as usize)
+            .map(|(i, _)| i)
+            .unwrap_or(line.len());
 
-            self.dirty = true;
-        }
+        line.insert(index, ch);
+        self.cursor.x = true_cursor.x + 1;
+
+        self.dirty = true;
     }
 
     pub fn delete_before(&mut self) {
@@ -158,40 +158,48 @@ impl Document {
 
         let true_cursor = self.true_cursor();
 
-        let mut string_to_push = None;
+        let line = self.get_line_mut(true_cursor.y as usize);
 
-        if let Some(line) = self.lines.get_mut(true_cursor.y as usize) {
-            if true_cursor.x != line.chars().count() as u64 {
-                line.remove(true_cursor.x as usize);
-            } else {
-                string_to_push = (true_cursor.y + 1 < self.lines.len() as u64)
-                    .then(|| self.lines.remove(true_cursor.y as usize + 1));
-            }
-
+        if true_cursor.x != line.chars().count() as u64 {
+            line.remove(true_cursor.x as usize);
             self.dirty = true;
-        }
-
-        if let Some(string_to_push) = string_to_push {
-            self.lines
-                .get_mut(true_cursor.y as usize)
-                .map(|line| line.push_str(&string_to_push));
+        } else {
+            if let Some(after_cursor) = (true_cursor.y + 1 < self.lines.len() as u64)
+                .then(|| self.lines.remove(true_cursor.y as usize + 1))
+            {
+                self.lines
+                    .get_mut(true_cursor.y as usize)
+                    .map(|line| line.push_str(&after_cursor));
+                self.dirty = true;
+            }
         }
     }
 
     pub fn insert_line_before_cursor(&mut self) {
         let true_cursor = self.true_cursor();
 
-        if let Some(line) = self.lines.get_mut(true_cursor.y as usize) {
-            let after_cursor = line.split_off(
-                line.char_indices()
-                    .nth(true_cursor.x as usize)
-                    .map(|(i, _)| i)
-                    .unwrap_or(line.len()),
+        let line = self.get_line_mut(true_cursor.y as usize);
+
+        let after_cursor = line.split_off(
+            line.char_indices()
+                .nth(true_cursor.x as usize)
+                .map(|(i, _)| i)
+                .unwrap_or(line.len()),
+        );
+
+        self.lines.insert(true_cursor.y as usize + 1, after_cursor);
+
+        self.move_right();
+    }
+
+    fn get_line_mut(&mut self, index: usize) -> &mut String {
+        if self.lines.len() <= index {
+            self.lines.extend(
+                std::iter::repeat(String::new())
+                    .take((self.cursor.y as usize + 1).saturating_sub(self.lines.len())),
             );
-
-            self.lines.insert(true_cursor.y as usize + 1, after_cursor);
-
-            self.move_right();
         }
+
+        &mut self.lines[index]
     }
 }
