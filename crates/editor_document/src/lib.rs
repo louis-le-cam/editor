@@ -111,7 +111,7 @@ impl Document {
                 .unwrap_or(0) as u64
         {
             self.cursor.x = 0;
-            if self.cursor.y > self.lines.len() as u64 {
+            if self.cursor.y >= self.lines.len() as u64 {
                 self.cursor.y = self.lines.len() as u64;
             } else {
                 self.cursor.y = self.cursor.y.saturating_add(1);
