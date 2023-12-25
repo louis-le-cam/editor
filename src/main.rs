@@ -1,6 +1,5 @@
 mod app;
 mod logger;
-mod mode;
 mod text_editor;
 mod theme;
 

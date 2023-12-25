@@ -128,4 +128,29 @@ impl Document {
             self.dirty = true;
         }
     }
+
+    pub fn delete_before(&mut self) {
+        self.move_left();
+
+        let true_cursor = self.true_cursor();
+
+        let mut string_to_push = None;
+
+        if let Some(line) = self.lines.get_mut(true_cursor.y as usize) {
+            if true_cursor.x != line.chars().count() as u64 {
+                line.remove(true_cursor.x as usize);
+            } else {
+                string_to_push = (true_cursor.y + 1 < self.lines.len() as u64)
+                    .then(|| self.lines.remove(true_cursor.y as usize + 1));
+            }
+
+            self.dirty = true;
+        }
+
+        if let Some(string_to_push) = string_to_push {
+            self.lines
+                .get_mut(true_cursor.y as usize)
+                .map(|line| line.push_str(&string_to_push));
+        }
+    }
 }

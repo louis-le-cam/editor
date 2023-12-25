@@ -1,10 +1,12 @@
 use std::path::PathBuf;
 
 use editor_document::Document;
-use editor_terminal::{Color, Event, KeyCode, KeyEventKind, TermRect, TermSlice, TermVec};
+use editor_input::Input;
+use editor_mode::Mode;
+use editor_terminal::{Color, Event, TermRect, TermSlice, TermVec};
 use glam::{u16vec2, U64Vec2};
 
-use crate::{mode::Mode, theme::Theme};
+use crate::theme::Theme;
 
 pub struct TextEditor {
     document: Document,
@@ -125,7 +127,7 @@ impl TextEditor {
         term.set_background_color(theme.code_background);
         term.set_text_color(theme.code_text);
 
-        let true_cursor_x = self.true_cursor_x();
+        let true_cursor = self.document.true_cursor();
 
         for y in 0..size.y {
             let line = self
@@ -140,10 +142,10 @@ impl TextEditor {
                 .skip(self.offset.x as usize)
                 .chain(" ".chars().cycle());
 
-            if y as i64 == self.document.cursor().y as i64 - self.offset.y as i64 {
-                let before_cursor_len = true_cursor_x.saturating_sub(self.offset.x) as usize;
+            if y as i64 == true_cursor.y as i64 - self.offset.y as i64 {
+                let before_cursor_len = true_cursor.x.saturating_sub(self.offset.x) as usize;
 
-                if true_cursor_x >= self.offset.x {
+                if true_cursor.x >= self.offset.x {
                     let before_cursor = (0..before_cursor_len)
                         .filter_map(|_| chars.next())
                         .collect::<String>();
@@ -173,47 +175,40 @@ impl TextEditor {
     }
 
     pub fn event(&mut self, theme: &Theme, term: TermSlice, event: &Event) {
-        let mut need_redraw = false;
+        let mut need_redraw = true;
+        let mut update_offset = false;
 
         match event {
-            Event::Key(key) => match self.mode {
-                Mode::Normal => {
-                    if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                        need_redraw = true;
-
-                        match key.code {
-                            KeyCode::Char('h') | KeyCode::Left => self.document.move_left(),
-                            KeyCode::Char('j') | KeyCode::Down => self.document.move_down(),
-                            KeyCode::Char('k') | KeyCode::Up => self.document.move_up(),
-                            KeyCode::Char('l') | KeyCode::Right => self.document.move_right(),
-                            KeyCode::Char('i') => self.mode = Mode::Insert,
-                            _ => need_redraw = false,
-                        }
-
-                        if need_redraw {
-                            let gutter_width =
-                                (self.document.lines().len().checked_ilog10().unwrap_or(0) + 3)
-                                    as u16;
-
-                            self.update_offset(
-                                term.rect().size.saturating_sub(u16vec2(gutter_width, 0)),
-                            );
-                        }
-                    }
+            Event::Key(key_event) => match Input::from_key(key_event, &self.mode) {
+                Input::Nothing => need_redraw = false,
+                Input::MoveLeft => {
+                    self.document.move_left();
+                    update_offset = true
                 }
-                Mode::Insert => {
-                    if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                        need_redraw = true;
-
-                        match key.code {
-                            KeyCode::Char(ch) => self.document.insert(ch),
-                            KeyCode::Esc => self.mode = Mode::Normal,
-                            _ => need_redraw = false,
-                        }
-                    }
+                Input::MoveRight => {
+                    self.document.move_right();
+                    update_offset = true
+                }
+                Input::MoveUp => {
+                    self.document.move_up();
+                    update_offset = true
+                }
+                Input::MoveDown => {
+                    self.document.move_down();
+                    update_offset = true
+                }
+                Input::InsertChar(ch) => self.document.insert(ch),
+                Input::SetMode(mode) => self.mode = mode,
+                Input::DeleteBefore => {
+                    self.document.delete_before();
                 }
             },
+            Event::Resize(_, _) => update_offset = true,
             _ => {}
+        }
+
+        if update_offset {
+            self.update_offset(term.rect().size);
         }
 
         if need_redraw {
@@ -238,14 +233,6 @@ impl TextEditor {
         if self.document.cursor().y < self.offset.y + 4 {
             self.offset.y = self.document.cursor().y.saturating_sub(4);
         }
-    }
-
-    fn true_cursor_x(&self) -> u64 {
-        self.document
-            .lines()
-            .get(self.document.cursor().y as usize)
-            .map(|line| self.document.cursor().x.min(line.len() as u64))
-            .unwrap_or(0)
     }
 }
 
