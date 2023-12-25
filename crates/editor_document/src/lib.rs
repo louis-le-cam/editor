@@ -1,9 +1,12 @@
+mod action;
+
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
 
+use action::Action;
 use glam::{u64vec2, U64Vec2};
 use log::error;
 
@@ -32,6 +35,10 @@ impl Document {
         }
     }
 
+    pub fn execute(&mut self, action: &Action) {
+        action.execute(self);
+    }
+
     pub fn write(&mut self) {
         if !self.dirty {
             return;
@@ -48,7 +55,7 @@ impl Document {
         };
     }
 
-    pub fn true_cursor_x(&self) -> u64 {
+    fn true_cursor_x(&self) -> u64 {
         self.lines
             .get(self.cursor.y as usize)
             .map(|line| self.cursor.x.min(line.len() as u64))
@@ -76,7 +83,7 @@ impl Document {
     }
 }
 
-/// Movement
+/// Cursor movement
 impl Document {
     pub fn move_left(&mut self) {
         let true_cursor_x = self.true_cursor_x();
