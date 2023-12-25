@@ -199,9 +199,9 @@ impl TextEditor {
                 }
                 Input::InsertChar(ch) => self.document.insert(ch),
                 Input::SetMode(mode) => self.mode = mode,
-                Input::DeleteBefore => {
-                    self.document.delete_before();
-                }
+                Input::DeleteBefore => self.document.delete_before(),
+                Input::InsertLineBeforeCursor => self.document.insert_line_before_cursor(),
+                Input::Write => self.document.write(),
             },
             Event::Resize(_, _) => update_offset = true,
             _ => {}

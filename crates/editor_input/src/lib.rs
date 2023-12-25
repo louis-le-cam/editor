@@ -8,7 +8,9 @@ pub enum Input {
     MoveUp,
     MoveDown,
     InsertChar(char),
+    InsertLineBeforeCursor,
     DeleteBefore,
+    Write,
     SetMode(Mode),
 }
 impl Input {
@@ -22,6 +24,11 @@ impl Input {
                         KeyCode::Char('k') | KeyCode::Up => Self::MoveUp,
                         KeyCode::Char('j') | KeyCode::Down => Self::MoveDown,
                         KeyCode::Char('i') => Self::SetMode(Mode::Insert),
+                        KeyCode::Char('s')
+                            if key_event.modifiers.contains(KeyModifiers::CONTROL) =>
+                        {
+                            Self::Write
+                        }
                         _ => Self::Nothing,
                     }
                 } else {
@@ -35,6 +42,11 @@ impl Input {
                             if key_event.modifiers.contains(KeyModifiers::CONTROL) =>
                         {
                             Input::DeleteBefore
+                        }
+                        KeyCode::Char('j')
+                            if key_event.modifiers.contains(KeyModifiers::CONTROL) =>
+                        {
+                            Input::InsertLineBeforeCursor
                         }
                         KeyCode::Char(ch) => Input::InsertChar(ch),
                         KeyCode::Esc => Input::SetMode(Mode::Normal),

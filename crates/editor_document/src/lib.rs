@@ -1,10 +1,11 @@
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
 
 use glam::{u64vec2, U64Vec2};
+use log::error;
 
 pub struct Document {
     path: PathBuf,
@@ -29,6 +30,22 @@ impl Document {
             cursor: u64vec2(0, 0),
             dirty: false,
         }
+    }
+
+    pub fn write(&mut self) {
+        if !self.dirty {
+            return;
+        }
+
+        if let Err(err) = fs::write(&self.path, self.lines.join("\n")) {
+            error!(
+                "Failed to write document to {}, {:?}",
+                self.path.display(),
+                err
+            );
+        } else {
+            self.dirty = false;
+        };
     }
 
     pub fn true_cursor_x(&self) -> u64 {
@@ -151,6 +168,23 @@ impl Document {
             self.lines
                 .get_mut(true_cursor.y as usize)
                 .map(|line| line.push_str(&string_to_push));
+        }
+    }
+
+    pub fn insert_line_before_cursor(&mut self) {
+        let true_cursor = self.true_cursor();
+
+        if let Some(line) = self.lines.get_mut(true_cursor.y as usize) {
+            let after_cursor = line.split_off(
+                line.char_indices()
+                    .nth(true_cursor.x as usize)
+                    .map(|(i, _)| i)
+                    .unwrap_or(line.len()),
+            );
+
+            self.lines.insert(true_cursor.y as usize + 1, after_cursor);
+
+            self.move_right();
         }
     }
 }
