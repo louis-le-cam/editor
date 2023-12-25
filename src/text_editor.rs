@@ -176,42 +176,25 @@ impl TextEditor {
 
     pub fn event(&mut self, theme: &Theme, term: TermSlice, event: &Event) {
         let mut need_redraw = true;
-        let mut update_offset = false;
 
         match event {
             Event::Key(key_event) => match Input::from_key(key_event, &self.mode) {
                 Input::Nothing => need_redraw = false,
-                Input::MoveLeft => {
-                    self.document.move_left();
-                    update_offset = true
-                }
-                Input::MoveRight => {
-                    self.document.move_right();
-                    update_offset = true
-                }
-                Input::MoveUp => {
-                    self.document.move_up();
-                    update_offset = true
-                }
-                Input::MoveDown => {
-                    self.document.move_down();
-                    update_offset = true
-                }
+                Input::MoveLeft => self.document.move_left(),
+                Input::MoveRight => self.document.move_right(),
+                Input::MoveUp => self.document.move_up(),
+                Input::MoveDown => self.document.move_down(),
                 Input::InsertChar(ch) => self.document.insert(ch),
                 Input::SetMode(mode) => self.mode = mode,
                 Input::DeleteBefore => self.document.delete_before(),
                 Input::InsertLineBeforeCursor => self.document.insert_line_before_cursor(),
                 Input::Write => self.document.write(),
             },
-            Event::Resize(_, _) => update_offset = true,
             _ => {}
         }
 
-        if update_offset {
-            self.update_offset(term.rect().size);
-        }
-
         if need_redraw {
+            self.update_offset(term.rect().size);
             self.draw(theme, term);
         }
     }
