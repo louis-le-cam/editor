@@ -1,3 +1,7 @@
+mod command_handler;
+
+pub use command_handler::CommandHandler;
+
 use editor_document::Document;
 
 macro_rules! actions {
@@ -47,8 +51,8 @@ macro_rules! actions {
 
 actions! {
     enum Actions {
-        Command => enum Command | | {
-            Quit { todo!() }
+        Command => enum Command |handler: &mut impl CommandHandler| {
+            Quit { handler.quit() }
         }
         Document => enum DocumentAction |document: &mut Document| {
             MoveLeft { document.move_left(); }
