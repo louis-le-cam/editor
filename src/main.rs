@@ -1,12 +1,9 @@
-mod app;
 mod logger;
-mod text_editor;
-mod theme;
 
 use log::info;
 use logger::setup_logger;
 
-use crate::app::App;
+use editor_app::App;
 
 fn main() {
     setup_logger();

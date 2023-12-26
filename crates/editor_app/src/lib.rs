@@ -1,11 +1,13 @@
-use editor_terminal::{Event, KeyCode, KeyModifiers, Term, TermRect};
+mod editor;
 
-use crate::{text_editor::TextEditor, theme::Theme};
+use editor::Editor;
+use editor_terminal::{Event, KeyCode, KeyModifiers, Term, TermRect};
+use editor_theme::Theme;
 
 pub struct App {
     term: Term,
     theme: Theme,
-    text_editor: TextEditor,
+    editor: Editor,
 }
 
 impl App {
@@ -13,13 +15,13 @@ impl App {
         Self {
             term: Term::new(),
             theme: Theme::default(),
-            text_editor: TextEditor::from_path("log.txt".into()),
+            editor: Editor::from_path("log.txt".into()),
         }
     }
 
     pub fn run(mut self) {
         let term_size = self.term.size();
-        self.text_editor.draw(
+        self.editor.draw(
             &self.theme,
             self.term.slice(TermRect::new((0, 0), term_size)),
         );
@@ -37,7 +39,7 @@ impl App {
                     }
                 }
                 Event::Resize(_, _) => {
-                    self.text_editor.draw(
+                    self.editor.draw(
                         &self.theme,
                         self.term.slice(TermRect::new((0, 0), term_size)),
                     );
@@ -45,7 +47,7 @@ impl App {
                 _ => {}
             }
 
-            self.text_editor.event(
+            self.editor.event(
                 &self.theme,
                 self.term.slice(TermRect::new((0, 0), term_size)),
                 &event,

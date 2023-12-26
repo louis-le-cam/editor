@@ -1,0 +1,7 @@
+[package]
+name = "editor_theme"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies]
+editor_terminal = { path = "../editor_terminal" }

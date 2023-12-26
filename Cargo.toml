@@ -9,6 +9,7 @@ editor_document = { path = "crates/editor_document" }
 editor_mode = { path = "crates/editor_mode" }
 editor_input = { path = "crates/editor_input" }
 editor_action = { path = "crates/editor_action" }
+editor_app = { path = "crates/editor_app" }
 log = "0.4.20"
 fern = "0.6.2"
 log-panics = "2.1.0"

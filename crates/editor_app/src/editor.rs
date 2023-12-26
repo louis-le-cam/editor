@@ -4,16 +4,16 @@ use editor_document::Document;
 use editor_input::Input;
 use editor_mode::Mode;
 use editor_terminal::{Color, Event, TermRect, TermSlice, TermVec};
+use editor_theme::Theme;
 use glam::{u16vec2, U64Vec2};
 
-use crate::theme::Theme;
-
-pub struct TextEditor {
+pub struct Editor {
     document: Document,
     mode: Mode,
     offset: U64Vec2,
 }
-impl TextEditor {
+
+impl Editor {
     pub fn from_path(path: PathBuf) -> Self {
         Self {
             document: Document::from_path(path),

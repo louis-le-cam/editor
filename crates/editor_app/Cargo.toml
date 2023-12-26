@@ -1,0 +1,12 @@
+[package]
+name = "editor_app"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies]
+editor_document = { path = "../editor_document" }
+editor_terminal = { path = "../editor_terminal" }
+editor_theme = { path = "../editor_theme" }
+editor_mode = { path = "../editor_mode" }
+editor_input = { path = "../editor_input" }
+glam = "0.25.0"
