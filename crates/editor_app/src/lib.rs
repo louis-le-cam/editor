@@ -1,9 +1,10 @@
 mod editor;
 
-use editor::Editor;
 use editor_action::CommandHandler;
 use editor_terminal::{Event, KeyCode, KeyModifiers, Term, TermRect};
 use editor_theme::Theme;
+
+use crate::editor::Editor;
 
 pub struct App {
     should_quit: bool,
