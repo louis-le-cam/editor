@@ -190,6 +190,8 @@ impl Document {
         self.lines.insert(true_cursor.y as usize + 1, after_cursor);
 
         self.move_right();
+
+        self.dirty = true;
     }
 
     fn get_line_mut(&mut self, index: usize) -> &mut String {
