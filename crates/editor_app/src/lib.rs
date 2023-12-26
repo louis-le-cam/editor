@@ -1,10 +1,12 @@
 mod editor;
 
 use editor::Editor;
+use editor_action::CommandHandler;
 use editor_terminal::{Event, KeyCode, KeyModifiers, Term, TermRect};
 use editor_theme::Theme;
 
 pub struct App {
+    should_quit: bool,
     term: Term,
     theme: Theme,
     editor: Editor,
@@ -13,6 +15,7 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         Self {
+            should_quit: false,
             term: Term::new(),
             theme: Theme::default(),
             editor: Editor::from_path("log.txt".into()),
@@ -27,7 +30,11 @@ impl App {
         );
         self.term.flush();
 
-        while let Ok(event) = self.term.wait_for_event() {
+        while !self.should_quit {
+            let Ok(event) = self.term.wait_for_event() else {
+                continue;
+            };
+
             let term_size = self.term.size();
 
             match event {
@@ -35,7 +42,7 @@ impl App {
                     if key.code == KeyCode::Char('c')
                         && key.modifiers.contains(KeyModifiers::CONTROL)
                     {
-                        break;
+                        self.quit();
                     }
                 }
                 Event::Resize(_, _) => {
@@ -54,5 +61,11 @@ impl App {
             );
             self.term.flush();
         }
+    }
+}
+
+impl CommandHandler for App {
+    fn quit(&mut self) {
+        self.should_quit = true;
     }
 }
