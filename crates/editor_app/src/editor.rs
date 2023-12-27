@@ -9,7 +9,6 @@ use glam::{u16vec2, U64Vec2};
 
 pub struct Editor {
     document: Document,
-    pub mode: Mode,
     offset: U64Vec2,
 }
 
@@ -17,12 +16,11 @@ impl Editor {
     pub fn from_path(path: PathBuf) -> Self {
         Self {
             document: Document::from_path(path),
-            mode: Mode::Normal,
             offset: (0, 0).into(),
         }
     }
 
-    pub fn draw(&mut self, theme: &Theme, mut term: TermSlice) {
+    pub fn draw(&mut self, theme: &Theme, mut term: TermSlice, mode: &Mode) {
         let gutter_width = (number_width(self.document.lines().len() as u64) + 2) as u16;
 
         self.draw_gutter(
@@ -39,6 +37,7 @@ impl Editor {
                 (0, term.rect().heigth().saturating_sub(1)),
                 (term.rect().width(), 1),
             )),
+            mode,
         );
 
         self.draw_code(
@@ -88,8 +87,8 @@ impl Editor {
         }
     }
 
-    fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice) {
-        let mode_abreviation = self.mode.abreviation();
+    fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice, mode: &Mode) {
+        let mode_abreviation = mode.abreviation();
 
         let path = self.document.path().display().to_string();
 
@@ -174,11 +173,17 @@ impl Editor {
         }
     }
 
-    pub fn execute(&mut self, theme: &Theme, term: TermSlice, action: &DocumentAction) {
+    pub fn execute(
+        &mut self,
+        theme: &Theme,
+        term: TermSlice,
+        mode: &Mode,
+        action: &DocumentAction,
+    ) {
         action.execute(&mut self.document);
 
         self.update_offset(term.rect().size);
-        self.draw(theme, term);
+        self.draw(theme, term, mode);
     }
 
     /// Update `self.offset` if `self.document.cursor()` is near edges

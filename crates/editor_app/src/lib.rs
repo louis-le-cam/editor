@@ -10,6 +10,7 @@ use crate::editor::Editor;
 
 pub struct App {
     should_quit: bool,
+    mode: Mode,
     term: Term,
     theme: Theme,
     inputs: Inputs,
@@ -20,6 +21,7 @@ impl App {
     pub fn new() -> Self {
         Self {
             should_quit: false,
+            mode: Mode::Normal,
             term: Term::new(),
             theme: Theme::default(),
             inputs: Inputs::default(),
@@ -28,42 +30,49 @@ impl App {
     }
 
     pub fn run(mut self) {
+        self.draw_editor();
+        self.term.flush();
+
+        while !self.should_quit {
+            if let Ok(event) = self.term.wait_for_event() {
+                self.handle_event(&event);
+
+                self.term.flush();
+            };
+        }
+    }
+
+    fn draw_editor(&mut self) {
         let term_size = self.term.size();
         self.editor.draw(
             &self.theme,
             self.term.slice(TermRect::new((0, 0), term_size)),
+            &self.mode,
         );
-        self.term.flush();
+    }
 
-        while !self.should_quit {
-            let Ok(event) = self.term.wait_for_event() else {
-                continue;
-            };
+    fn handle_event(&mut self, event: &Event) {
+        match event {
+            Event::Key(key_event) => self.execute(&self.inputs.key_event(&key_event, &self.mode)),
+            Event::Resize(_, _) => self.draw_editor(),
+            _ => {}
+        }
+    }
 
-            let term_size = self.term.size();
+    fn execute(&mut self, action: &Option<Action>) {
+        match action {
+            Some(Action::Command(command)) => command.execute(self),
+            Some(Action::Document(document_action)) => {
+                let term_size = self.term.size();
 
-            match event {
-                Event::Key(key_event) => {
-                    match self.inputs.key_event(&key_event, &self.editor.mode) {
-                        Some(Action::Command(command)) => command.execute(&mut self),
-                        Some(Action::Document(document_action)) => self.editor.execute(
-                            &self.theme,
-                            self.term.slice(TermRect::new((0, 0), term_size)),
-                            &document_action,
-                        ),
-                        None => {}
-                    }
-                }
-                Event::Resize(_, _) => {
-                    self.editor.draw(
-                        &self.theme,
-                        self.term.slice(TermRect::new((0, 0), term_size)),
-                    );
-                }
-                _ => {}
+                self.editor.execute(
+                    &self.theme,
+                    self.term.slice(TermRect::new((0, 0), term_size)),
+                    &self.mode,
+                    &document_action,
+                )
             }
-
-            self.term.flush();
+            None => {}
         }
     }
 }
@@ -74,20 +83,12 @@ impl CommandHandler for App {
     }
 
     fn enter_insert_mode(&mut self) {
-        self.editor.mode = Mode::Insert;
-        let term_size = self.term.size();
-        self.editor.draw(
-            &self.theme,
-            self.term.slice(TermRect::new((0, 0), term_size)),
-        );
+        self.mode = Mode::Insert;
+        self.draw_editor();
     }
 
     fn enter_normal_mode(&mut self) {
-        self.editor.mode = Mode::Normal;
-        let term_size = self.term.size();
-        self.editor.draw(
-            &self.theme,
-            self.term.slice(TermRect::new((0, 0), term_size)),
-        );
+        self.mode = Mode::Normal;
+        self.draw_editor();
     }
 }
