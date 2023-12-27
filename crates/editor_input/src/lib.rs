@@ -25,46 +25,22 @@ impl Inputs {
             return None;
         }
 
-        // info!("==================================================");
-
         match mode {
             Mode::Normal => self
                 .normal
                 .iter()
                 .filter(|(input, _)| {
-                    // info!(
-                    //     "{:?} == {:?} && {:?} == {:?}  = {}",
-                    //     input.key,
-                    //     key_event.code,
-                    //     input.modifier,
-                    //     key_event.modifiers,
-                    //     input.key == key_event.code && input.modifier == key_event.modifiers
-                    // );
                     input.key == key_event.code && input.modifier == key_event.modifiers
                 })
-                .map(|(_, action)| {
-                    // info!("action: {:?}", action);
-                    action.clone()
-                })
+                .map(|(_, action)| action.clone())
                 .next(),
             Mode::Insert => self
                 .insert
                 .iter()
                 .filter(|(input, _)| {
-                    // info!(
-                    //     "{:?} == {:?} && {:?} == {:?}  = {}",
-                    //     input.key,
-                    //     key_event.code,
-                    //     input.modifier,
-                    //     key_event.modifiers,
-                    //     input.key == key_event.code && input.modifier == key_event.modifiers
-                    // );
                     input.key == key_event.code && input.modifier == key_event.modifiers
                 })
-                .map(|(_, action)| {
-                    // info!("action: {:?}", action);
-                    action.clone()
-                })
+                .map(|(_, action)| action.clone())
                 .next()
                 .or_else(|| match (key_event.modifiers, key_event.code) {
                     (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(ch)) => {
