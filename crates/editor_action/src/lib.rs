@@ -6,12 +6,13 @@ use editor_document::Document;
 
 macro_rules! actions {
     (
-        enum Actions {
+        enum Action {
             $($variant_name:ident => enum $enum_name:ident |$($fn_arg:ident : $fn_arg_type:ty),*| {
                 $($name:ident $(($($arg_name:ident : $arg_type:ty),+))? $code:block)*
             })+
         }
     ) => {
+        #[derive(Clone, Debug)]
         pub enum Action {
             $($variant_name($enum_name),)+
         }
@@ -25,6 +26,7 @@ macro_rules! actions {
         }
 
         $(
+            #[derive(Clone, Debug)]
             pub enum $enum_name {
                 $($name $(($($arg_type)+))?,)*
             }
@@ -45,14 +47,22 @@ macro_rules! actions {
                     }
                 }
             }
+
+            impl Into<Action> for $enum_name {
+                fn into(self) -> Action {
+                    Action::$variant_name(self)
+                }
+            }
         )+
     };
 }
 
 actions! {
-    enum Actions {
+    enum Action {
         Command => enum Command |handler: &mut impl CommandHandler| {
             Quit { handler.quit() }
+            EnterInsertMode { handler.enter_insert_mode() }
+            EnterNormalMode { handler.enter_normal_mode() }
         }
         Document => enum DocumentAction |document: &mut Document| {
             MoveLeft { document.move_left(); }

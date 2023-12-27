@@ -1,12 +1,9 @@
-mod action;
-
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
 
-use action::Action;
 use glam::{u64vec2, U64Vec2};
 use log::error;
 
@@ -33,10 +30,6 @@ impl Document {
             cursor: u64vec2(0, 0),
             dirty: false,
         }
-    }
-
-    pub fn execute(&mut self, action: &Action) {
-        action.execute(self);
     }
 
     pub fn write(&mut self) {

@@ -6,3 +6,4 @@ edition =  "2021"
 [dependencies]
 editor_document = { path = "../editor_document" }
 paste = "1.0.14"
+log = "0.4.20"

@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
+use editor_action::DocumentAction;
 use editor_document::Document;
-use editor_input::Input;
 use editor_mode::Mode;
-use editor_terminal::{Color, Event, TermRect, TermSlice, TermVec};
+use editor_terminal::{Color, TermRect, TermSlice, TermVec};
 use editor_theme::Theme;
 use glam::{u16vec2, U64Vec2};
 
 pub struct Editor {
     document: Document,
-    mode: Mode,
+    pub mode: Mode,
     offset: U64Vec2,
 }
 
@@ -174,29 +174,11 @@ impl Editor {
         }
     }
 
-    pub fn event(&mut self, theme: &Theme, term: TermSlice, event: &Event) {
-        let mut need_redraw = true;
+    pub fn execute(&mut self, theme: &Theme, term: TermSlice, action: &DocumentAction) {
+        action.execute(&mut self.document);
 
-        match event {
-            Event::Key(key_event) => match Input::from_key(key_event, &self.mode) {
-                Input::Nothing => need_redraw = false,
-                Input::MoveLeft => self.document.move_left(),
-                Input::MoveRight => self.document.move_right(),
-                Input::MoveUp => self.document.move_up(),
-                Input::MoveDown => self.document.move_down(),
-                Input::InsertChar(ch) => self.document.insert(ch),
-                Input::SetMode(mode) => self.mode = mode,
-                Input::DeleteBefore => self.document.delete_before(),
-                Input::InsertLineBeforeCursor => self.document.insert_line_before_cursor(),
-                Input::Write => self.document.write(),
-            },
-            _ => {}
-        }
-
-        if need_redraw {
-            self.update_offset(term.rect().size);
-            self.draw(theme, term);
-        }
+        self.update_offset(term.rect().size);
+        self.draw(theme, term);
     }
 
     /// Update `self.offset` if `self.document.cursor()` is near edges

@@ -1,61 +1,115 @@
+use editor_action::{Action, Command, DocumentAction};
 use editor_mode::Mode;
 use editor_terminal::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-pub enum Input {
-    Nothing,
-    MoveLeft,
-    MoveRight,
-    MoveUp,
-    MoveDown,
-    InsertChar(char),
-    InsertLineBeforeCursor,
-    DeleteBefore,
-    Write,
-    SetMode(Mode),
+#[derive(Debug)]
+pub struct Input {
+    key: KeyCode,
+    modifier: KeyModifiers,
 }
+
 impl Input {
-    pub fn from_key(key_event: &KeyEvent, mode: &Mode) -> Self {
-        match mode {
-            Mode::Normal => {
-                if matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                    match key_event.code {
-                        KeyCode::Char('h') | KeyCode::Left => Self::MoveLeft,
-                        KeyCode::Char('l') | KeyCode::Right => Self::MoveRight,
-                        KeyCode::Char('k') | KeyCode::Up => Self::MoveUp,
-                        KeyCode::Char('j') | KeyCode::Down => Self::MoveDown,
-                        KeyCode::Char('i') => Self::SetMode(Mode::Insert),
-                        KeyCode::Char('s')
-                            if key_event.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
-                            Self::Write
-                        }
-                        _ => Self::Nothing,
-                    }
-                } else {
-                    Self::Nothing
-                }
-            }
-            Mode::Insert => {
-                if matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                    match key_event.code {
-                        KeyCode::Char('h')
-                            if key_event.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
-                            Input::DeleteBefore
-                        }
-                        KeyCode::Char('j')
-                            if key_event.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
-                            Input::InsertLineBeforeCursor
-                        }
-                        KeyCode::Char(ch) => Input::InsertChar(ch),
-                        KeyCode::Esc => Input::SetMode(Mode::Normal),
-                        _ => Input::Nothing,
-                    }
-                } else {
-                    Input::Nothing
-                }
-            }
+    pub fn new(key: KeyCode, modifier: KeyModifiers) -> Self {
+        Self { key, modifier }
+    }
+}
+
+pub struct Inputs {
+    normal: Vec<(Input, Action)>,
+    insert: Vec<(Input, Action)>,
+}
+
+impl Inputs {
+    pub fn key_event(&self, key_event: &KeyEvent, mode: &Mode) -> Option<Action> {
+        if key_event.kind == KeyEventKind::Release {
+            return None;
         }
+
+        // info!("==================================================");
+
+        match mode {
+            Mode::Normal => self
+                .normal
+                .iter()
+                .filter(|(input, _)| {
+                    // info!(
+                    //     "{:?} == {:?} && {:?} == {:?}  = {}",
+                    //     input.key,
+                    //     key_event.code,
+                    //     input.modifier,
+                    //     key_event.modifiers,
+                    //     input.key == key_event.code && input.modifier == key_event.modifiers
+                    // );
+                    input.key == key_event.code && input.modifier == key_event.modifiers
+                })
+                .map(|(_, action)| {
+                    // info!("action: {:?}", action);
+                    action.clone()
+                })
+                .next(),
+            Mode::Insert => self
+                .insert
+                .iter()
+                .filter(|(input, _)| {
+                    // info!(
+                    //     "{:?} == {:?} && {:?} == {:?}  = {}",
+                    //     input.key,
+                    //     key_event.code,
+                    //     input.modifier,
+                    //     key_event.modifiers,
+                    //     input.key == key_event.code && input.modifier == key_event.modifiers
+                    // );
+                    input.key == key_event.code && input.modifier == key_event.modifiers
+                })
+                .map(|(_, action)| {
+                    // info!("action: {:?}", action);
+                    action.clone()
+                })
+                .next()
+                .or_else(|| match (key_event.modifiers, key_event.code) {
+                    (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(ch)) => {
+                        Some(DocumentAction::Insert(ch).into())
+                    }
+                    _ => None,
+                }),
+        }
+    }
+}
+
+impl Default for Inputs {
+    fn default() -> Self {
+        macro_rules! keybinds {
+            ($(($key:expr, $modifiers:ident, $action:expr),)*) => {
+                {
+                    use editor_terminal::{KeyCode::*, KeyModifiers};
+
+                    vec![
+                        $((Input::new($key, KeyModifiers::$modifiers), Into::<Action>::into($action)),)*
+                    ]
+                }
+            };
+        }
+
+        let normal = keybinds!(
+            (Left, NONE, DocumentAction::MoveLeft),
+            (Right, NONE, DocumentAction::MoveRight),
+            (Up, NONE, DocumentAction::MoveUp),
+            (Down, NONE, DocumentAction::MoveDown),
+            (Char('h'), NONE, DocumentAction::MoveLeft),
+            (Char('l'), NONE, DocumentAction::MoveRight),
+            (Char('k'), NONE, DocumentAction::MoveUp),
+            (Char('j'), NONE, DocumentAction::MoveDown),
+            (Char('i'), NONE, Command::EnterInsertMode),
+            (Char('s'), CONTROL, DocumentAction::Write),
+            (Char('c'), CONTROL, Command::Quit),
+        );
+
+        let insert = keybinds!(
+            (Char('h'), CONTROL, DocumentAction::DeleteBefore),
+            (Char('j'), CONTROL, DocumentAction::InsertLineBeforeCursor),
+            (Esc, NONE, Command::EnterNormalMode),
+        );
+
+        Self { normal, insert }
     }
 }
