@@ -111,7 +111,7 @@ impl Editor {
                     mode_abreviation.len()
                         + path.len()
                         + number_width(self.document.cursor().x + 1) as usize
-                        + 8
+                        + 9
                 )
             ),
         );
