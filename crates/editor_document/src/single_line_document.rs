@@ -32,19 +32,42 @@ impl DocumentActionHandler for SingleLineDocument {
     fn move_left(&mut self) {
         self.cursor = self.cursor.saturating_sub(1)
     }
-
     fn move_right(&mut self) {
         if self.cursor < self.line.len() {
             self.cursor += 1;
         }
     }
-
     fn move_up(&mut self) {
         warn!("Can't move up on single line document");
     }
-
     fn move_down(&mut self) {
         warn!("Can't move down on single line document");
+    }
+
+    fn extend_end_left(&mut self) {
+        warn!("Can't extend end left on single line document");
+    }
+    fn extend_end_right(&mut self) {
+        warn!("Can't extend end right on single line document");
+    }
+    fn extend_end_up(&mut self) {
+        warn!("Can't extend end up on single line document");
+    }
+    fn extend_end_down(&mut self) {
+        warn!("Can't extend end down on single line document");
+    }
+
+    fn move_selection_left(&mut self) {
+        warn!("Can't selection left on single line document");
+    }
+    fn move_selection_right(&mut self) {
+        warn!("Can't selection right on single line document");
+    }
+    fn move_selection_up(&mut self) {
+        warn!("Can't selection up on single line document");
+    }
+    fn move_selection_down(&mut self) {
+        warn!("Can't selection down on single line document");
     }
 
     fn insert(&mut self, ch: char) {

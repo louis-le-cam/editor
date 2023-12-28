@@ -120,7 +120,7 @@ impl Editor {
     fn draw_code(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
 
-        let (start, _) = self.document.selection();
+        let (start, end) = self.document.selection();
 
         term.set_background_color(theme.code_background);
         term.set_text_color(theme.code_text);
@@ -138,31 +138,57 @@ impl Editor {
                 .skip(self.offset.0 as usize)
                 .chain(" ".chars().cycle());
 
-            if y as isize == start.1 as isize - self.offset.1 as isize {
-                let before_cursor_len = start.0.saturating_sub(self.offset.0) as usize;
+            let offseted_y = y as usize + self.offset.1;
 
-                if start.0 >= self.offset.0 {
-                    let before_cursor = (0..before_cursor_len)
-                        .filter_map(|_| chars.next())
-                        .collect::<String>();
+            if (start.1.min(end.1)..start.1.max(end.1) + 1).contains(&offseted_y) {
+                let before_selection_len = if offseted_y == start.1 {
+                    start.0.saturating_sub(self.offset.0) as usize
+                } else {
+                    0
+                };
 
-                    term.write_to((0, y), &before_cursor);
+                let under_selection_len = if offseted_y == end.1 {
+                    (size.x as usize).saturating_sub(
+                        before_selection_len
+                            + ((size.x as usize)
+                                .saturating_sub(end.0.saturating_sub(self.offset.0) + 1)),
+                    )
+                } else {
+                    (size.x as usize).saturating_sub(before_selection_len)
+                };
 
-                    let at_cursor = chars.next().map(|ch| ch.to_string()).unwrap();
+                let after_selection_len =
+                    (size.x as usize).saturating_sub(before_selection_len + under_selection_len);
 
+                if before_selection_len != 0 {
+                    term.write_to(
+                        (0, y),
+                        &(0..before_selection_len)
+                            .map(|_| chars.next().unwrap_or(' '))
+                            .collect::<String>(),
+                    );
+                }
+
+                if under_selection_len != 0 {
                     term.set_background_color(theme.cursor);
                     term.set_text_color(Color::Black);
-                    term.write_to((before_cursor_len as u16, y), &at_cursor);
+                    term.write_to(
+                        (before_selection_len as u16, y),
+                        &(0..under_selection_len)
+                            .map(|_| chars.next().unwrap_or(' '))
+                            .collect::<String>(),
+                    );
                     term.set_background_color(theme.code_background);
                     term.set_text_color(theme.code_text);
+                }
 
-                    let after_cursor = chars
-                        .take((size.x as usize).saturating_sub(before_cursor_len + 1))
-                        .collect::<String>();
-
-                    term.write_to((before_cursor_len as u16 + 1, y), &after_cursor);
-                } else {
-                    term.write_to((0, y), &chars.take(size.x as usize).collect::<String>());
+                if after_selection_len != 0 {
+                    term.write_to(
+                        ((before_selection_len + under_selection_len) as u16, y),
+                        &(0..after_selection_len)
+                            .map(|_| chars.next().unwrap_or(' '))
+                            .collect::<String>(),
+                    );
                 }
             } else {
                 term.write_to((0, y), &chars.take(size.x as usize).collect::<String>());
@@ -184,7 +210,7 @@ impl Editor {
     /// Update `self.offset` if `self.document.cursor()` is near edges
     fn update_offset(&mut self, mode: &Mode, size: TermVec) {
         let cursor = match mode {
-            Mode::Normal => self.document.selection().1,
+            Mode::Normal | Mode::Selection => self.document.selection().1,
             Mode::Insert => self.document.selection().0,
         };
 

@@ -51,26 +51,23 @@ impl Selection {
     }
 
     pub fn move_left(&mut self, lines: &[String]) {
-        self.extend_left(lines);
+        self.extend_end_left(lines);
         self.collapse_to_end();
     }
-
     pub fn move_right(&mut self, lines: &[String]) {
-        self.extend_right(lines);
+        self.extend_end_right(lines);
         self.collapse_to_end();
     }
-
     pub fn move_down(&mut self, lines: &[String]) {
-        self.extend_down(lines);
+        self.extend_end_down(lines);
         self.collapse_to_end();
     }
-
     pub fn move_up(&mut self) {
-        self.extend_up();
+        self.extend_end_up();
         self.collapse_to_end();
     }
 
-    pub fn extend_left(&mut self, lines: &[String]) {
+    pub fn extend_end_left(&mut self, lines: &[String]) {
         self.end = self.true_end(lines);
 
         if self.end.0 == 0 {
@@ -84,8 +81,7 @@ impl Selection {
             self.end.0 = self.end.0 - 1;
         }
     }
-
-    pub fn extend_right(&mut self, lines: &[String]) {
+    pub fn extend_end_right(&mut self, lines: &[String]) {
         self.end = self.true_end(lines);
 
         if self.end.0
@@ -102,14 +98,69 @@ impl Selection {
             self.end.0 = self.end.0.saturating_add(1);
         }
     }
-
-    pub fn extend_down(&mut self, lines: &[String]) {
+    pub fn extend_end_down(&mut self, lines: &[String]) {
         if self.end.1 < lines.len() {
             self.end.1 = self.end.1.saturating_add(1);
         }
     }
-
-    pub fn extend_up(&mut self) {
+    pub fn extend_end_up(&mut self) {
         self.end.1 = self.end.1.saturating_sub(1);
+    }
+
+    pub fn extend_start_left(&mut self, lines: &[String]) {
+        self.start = self.true_start(lines);
+
+        if self.start.0 == 0 {
+            if self.start.1 == 0 {
+                self.start = (0, 0);
+            } else {
+                self.start.1 = self.start.1 - 1;
+                self.start.0 = lines.get(self.start.1).map(|line| line.len()).unwrap_or(0);
+            }
+        } else {
+            self.start.0 = self.start.0 - 1;
+        }
+    }
+    pub fn extend_start_right(&mut self, lines: &[String]) {
+        self.start = self.true_start(lines);
+
+        if self.start.0
+            >= lines
+                .get(self.start.1)
+                .map(|line| line.chars().count())
+                .unwrap_or(0)
+        {
+            self.start.0 = 0;
+            if self.start.1 < lines.len() {
+                self.start.1 = self.start.1.saturating_add(1);
+            }
+        } else {
+            self.start.0 = self.start.0.saturating_add(1);
+        }
+    }
+    pub fn extend_start_down(&mut self, lines: &[String]) {
+        if self.start.1 < lines.len() {
+            self.start.1 = self.start.1.saturating_add(1);
+        }
+    }
+    pub fn extend_start_up(&mut self) {
+        self.start.1 = self.start.1.saturating_sub(1);
+    }
+
+    pub fn move_selection_left(&mut self, lines: &[String]) {
+        self.extend_end_left(lines);
+        self.extend_start_left(lines);
+    }
+    pub fn move_selection_right(&mut self, lines: &[String]) {
+        self.extend_end_right(lines);
+        self.extend_start_right(lines);
+    }
+    pub fn move_selection_down(&mut self, lines: &[String]) {
+        self.extend_end_down(lines);
+        self.extend_start_down(lines);
+    }
+    pub fn move_selection_up(&mut self) {
+        self.extend_end_up();
+        self.extend_start_up();
     }
 }

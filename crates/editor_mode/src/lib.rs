@@ -2,12 +2,14 @@
 pub enum Mode {
     Normal,
     Insert,
+    Selection,
 }
 impl Mode {
     pub fn abreviation(&self) -> &'static str {
         match self {
             Mode::Normal => "NOR",
             Mode::Insert => "INS",
+            Mode::Selection => "SEL",
         }
     }
 }

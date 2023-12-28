@@ -17,6 +17,7 @@ impl Input {
 pub struct Inputs {
     normal: Vec<(Input, Action)>,
     insert: Vec<(Input, Action)>,
+    selection: Vec<(Input, Action)>,
     text_box: Vec<(Input, Action)>,
 }
 
@@ -55,6 +56,14 @@ impl Inputs {
                         }
                         _ => None,
                     }),
+                Mode::Selection => self
+                    .selection
+                    .iter()
+                    .filter(|(input, _)| {
+                        input.key == key_event.code && input.modifier == key_event.modifiers
+                    })
+                    .map(|(_, action)| action.clone())
+                    .next(),
             },
             Focused::CommandBar => self
                 .text_box
@@ -98,6 +107,7 @@ impl Default for Inputs {
             (Char('k'), NONE, DocumentAction::MoveUp),
             (Char('j'), NONE, DocumentAction::MoveDown),
             (Char('i'), NONE, Command::EnterInsertMode),
+            (Char('v'), NONE, Command::EnterSelectionMode),
             (Char('s'), CONTROL, DocumentAction::Write),
             (Char(':'), NONE, Command::FocusCommandBar),
         );
@@ -108,6 +118,20 @@ impl Default for Inputs {
             (Char('j'), CONTROL, DocumentAction::InsertLineBeforeCursor),
             (Enter, CONTROL, DocumentAction::InsertLineBeforeCursor),
             (Esc, NONE, Command::EnterNormalMode),
+        );
+
+        let selection = keybinds!(
+            (Left, NONE, DocumentAction::ExtendEndLeft),
+            (Right, NONE, DocumentAction::ExtendEndRight),
+            (Up, NONE, DocumentAction::ExtendEndUp),
+            (Down, NONE, DocumentAction::ExtendEndDown),
+            (Char('h'), NONE, DocumentAction::ExtendEndLeft),
+            (Char('l'), NONE, DocumentAction::ExtendEndRight),
+            (Char('k'), NONE, DocumentAction::ExtendEndUp),
+            (Char('j'), NONE, DocumentAction::ExtendEndDown),
+            (Char('i'), NONE, Command::EnterInsertMode),
+            (Esc, NONE, Command::EnterNormalMode),
+            (Char(':'), NONE, Command::FocusCommandBar),
         );
 
         let text_box = keybinds!(
@@ -123,6 +147,7 @@ impl Default for Inputs {
         Self {
             normal,
             insert,
+            selection,
             text_box,
         }
     }

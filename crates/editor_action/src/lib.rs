@@ -78,8 +78,9 @@ actions! {
     enum Action {
         Command => enum Command |handler: &mut impl CommandHandler| {
             Quit, "q", "quit" { handler.quit() }
-            EnterInsertMode, "enter_insert_mode" { handler.enter_insert_mode() }
             EnterNormalMode, "enter_normal_mode" { handler.enter_normal_mode() }
+            EnterInsertMode, "enter_insert_mode" { handler.enter_insert_mode() }
+            EnterSelectionMode, "enter_selection_mode" { handler.enter_selection_mode() }
             FocusEditor, "focus_editor" { handler.focus_editor() }
             FocusCommandBar, "focus_command_bar" { handler.focus_command_bar() }
             Validate, "validate" { handler.validate() }
@@ -90,6 +91,14 @@ actions! {
             MoveRight, "move_right" { document.move_right(); }
             MoveUp, "move_up" { document.move_up(); }
             MoveDown, "move_down" { document.move_down(); }
+            ExtendEndLeft, "extend_end_left" { document.extend_end_left(); }
+            ExtendEndRight, "extend_end_right" { document.extend_end_right(); }
+            ExtendEndUp, "extend_end_up" { document.extend_end_up(); }
+            ExtendEndDown, "extend_end_down" { document.extend_end_down(); }
+            MoveSelectionLeft, "move_selection_left" { document.move_selection_left(); }
+            MoveSelectionRight, "move_selection_right" { document.move_selection_right(); }
+            MoveSelectionUp, "move_selection_up" { document.move_selection_up(); }
+            MoveSelectionDown, "move_selection_down" { document.move_selection_down(); }
             DeleteBefore, "delete_before" { document.delete_before() }
             Insert(char: char), "insert"  { document.insert(*char) }
             Write, "write" { document.write() }

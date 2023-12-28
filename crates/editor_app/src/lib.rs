@@ -116,13 +116,18 @@ impl CommandHandler for App {
         self.should_quit = true;
     }
 
+    fn enter_normal_mode(&mut self) {
+        self.mode = Mode::Normal;
+        self.draw_editor();
+    }
+
     fn enter_insert_mode(&mut self) {
         self.mode = Mode::Insert;
         self.draw_editor();
     }
 
-    fn enter_normal_mode(&mut self) {
-        self.mode = Mode::Normal;
+    fn enter_selection_mode(&mut self) {
+        self.mode = Mode::Selection;
         self.draw_editor();
     }
 

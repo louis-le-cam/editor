@@ -35,9 +35,9 @@ impl Document {
     }
 
     fn get_line_mut(&mut self, index: usize) -> &mut String {
-        if index < self.lines.len() {
+        if index >= self.lines.len() {
             self.lines.extend(
-                std::iter::repeat(String::new()).take(index.saturating_sub(self.lines.len())),
+                std::iter::repeat(String::new()).take(index.saturating_sub(self.lines.len()) + 1),
             );
         }
 
@@ -68,17 +68,40 @@ impl DocumentActionHandler for Document {
     fn move_left(&mut self) {
         self.selection.move_left(&self.lines);
     }
-
     fn move_right(&mut self) {
         self.selection.move_right(&self.lines);
     }
-
     fn move_up(&mut self) {
         self.selection.move_up();
     }
-
     fn move_down(&mut self) {
         self.selection.move_down(&self.lines);
+    }
+
+    fn extend_end_left(&mut self) {
+        self.selection.extend_end_left(&self.lines);
+    }
+    fn extend_end_right(&mut self) {
+        self.selection.extend_end_right(&self.lines);
+    }
+    fn extend_end_up(&mut self) {
+        self.selection.extend_end_up();
+    }
+    fn extend_end_down(&mut self) {
+        self.selection.extend_end_down(&self.lines);
+    }
+
+    fn move_selection_left(&mut self) {
+        self.selection.move_selection_left(&self.lines);
+    }
+    fn move_selection_right(&mut self) {
+        self.selection.move_selection_right(&self.lines);
+    }
+    fn move_selection_up(&mut self) {
+        self.selection.move_selection_up();
+    }
+    fn move_selection_down(&mut self) {
+        self.selection.move_selection_down(&self.lines);
     }
 
     fn insert(&mut self, ch: char) {
@@ -94,13 +117,16 @@ impl DocumentActionHandler for Document {
 
         line.insert(index, ch);
 
-        self.selection.move_right(&self.lines);
+        self.selection.move_selection_right(&self.lines);
 
         self.dirty = true;
     }
 
     fn delete_before(&mut self) {
-        self.selection.move_left(&self.lines);
+        self.selection.extend_start_left(&self.lines);
+        if self.selection.true_start(&self.lines).1 == self.selection.true_end(&self.lines).1 {
+            self.selection.extend_end_left(&self.lines);
+        }
 
         let true_start = self.selection.true_start(&self.lines);
 
@@ -113,6 +139,7 @@ impl DocumentActionHandler for Document {
             if let Some(after_cursor) =
                 (true_start.1 + 1 < self.lines.len()).then(|| self.lines.remove(true_start.1 + 1))
             {
+                self.selection.extend_end_up();
                 self.lines
                     .get_mut(true_start.1)
                     .map(|line| line.push_str(&after_cursor));
@@ -135,7 +162,8 @@ impl DocumentActionHandler for Document {
 
         self.lines.insert(true_start.1 + 1, after_cursor);
 
-        self.move_right();
+        self.selection.extend_start_right(&self.lines);
+        self.selection.extend_end_down(&self.lines);
 
         self.dirty = true;
     }
