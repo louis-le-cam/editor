@@ -1,7 +1,7 @@
 A terminal modal editor written in rust inspired by [Helix](https://github.com/helix-editor/helix)
 
 # Todo:
-- [ ] Bottom command bar
+- [x] Bottom command bar
 - [ ] Selection
 - [ ] Multiple cursors
 - [ ] Selection mode
