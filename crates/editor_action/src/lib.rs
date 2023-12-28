@@ -77,7 +77,7 @@ macro_rules! actions {
 actions! {
     enum Action {
         Command => enum Command |handler: &mut impl CommandHandler| {
-            Quit, "quit" { handler.quit() }
+            Quit, "q", "quit" { handler.quit() }
             EnterInsertMode, "enter_insert_mode" { handler.enter_insert_mode() }
             EnterNormalMode, "enter_normal_mode" { handler.enter_normal_mode() }
             FocusEditor, "focus_editor" { handler.focus_editor() }

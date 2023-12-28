@@ -99,13 +99,14 @@ impl Default for Inputs {
             (Char('j'), NONE, DocumentAction::MoveDown),
             (Char('i'), NONE, Command::EnterInsertMode),
             (Char('s'), CONTROL, DocumentAction::Write),
-            (Char('c'), CONTROL, Command::Quit),
             (Char(':'), NONE, Command::FocusCommandBar),
         );
 
         let insert = keybinds!(
             (Char('h'), CONTROL, DocumentAction::DeleteBefore),
+            (Backspace, NONE, DocumentAction::DeleteBefore),
             (Char('j'), CONTROL, DocumentAction::InsertLineBeforeCursor),
+            (Enter, CONTROL, DocumentAction::InsertLineBeforeCursor),
             (Esc, NONE, Command::EnterNormalMode),
         );
 
@@ -115,6 +116,7 @@ impl Default for Inputs {
             (Left, NONE, DocumentAction::MoveLeft),
             (Right, NONE, DocumentAction::MoveRight),
             (Char('h'), CONTROL, DocumentAction::DeleteBefore),
+            (Backspace, NONE, DocumentAction::DeleteBefore),
         );
 
         Self {
