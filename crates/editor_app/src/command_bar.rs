@@ -3,7 +3,6 @@ use editor_document::SingleLineDocument;
 use editor_mode::Focused;
 use editor_terminal::TermSlice;
 use editor_theme::Theme;
-use log::warn;
 
 pub struct CommandBar {
     document: SingleLineDocument,

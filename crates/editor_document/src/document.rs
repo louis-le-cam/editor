@@ -5,13 +5,14 @@ use std::{
 };
 
 use editor_action::DocumentActionHandler;
-use glam::{u64vec2, U64Vec2};
 use log::error;
+
+use crate::selection::Selection;
 
 pub struct Document {
     path: PathBuf,
     lines: Vec<String>,
-    cursor: U64Vec2,
+    selection: Selection,
     dirty: bool,
 }
 
@@ -28,35 +29,26 @@ impl Document {
         Self {
             lines,
             path,
-            cursor: u64vec2(0, 0),
+            selection: Selection::new(),
             dirty: false,
         }
     }
 
     fn get_line_mut(&mut self, index: usize) -> &mut String {
-        if self.lines.len() <= index {
+        if index < self.lines.len() {
             self.lines.extend(
-                std::iter::repeat(String::new())
-                    .take((self.cursor.y as usize + 1).saturating_sub(self.lines.len())),
+                std::iter::repeat(String::new()).take(index.saturating_sub(self.lines.len())),
             );
         }
 
         &mut self.lines[index]
     }
 
-    fn true_cursor_x(&self) -> u64 {
-        self.lines
-            .get(self.cursor.y as usize)
-            .map(|line| self.cursor.x.min(line.len() as u64))
-            .unwrap_or(0)
-    }
-
-    pub fn cursor(&self) -> U64Vec2 {
-        self.cursor
-    }
-
-    pub fn true_cursor(&self) -> U64Vec2 {
-        u64vec2(self.true_cursor_x(), self.cursor.y)
+    pub fn selection(&self) -> ((usize, usize), (usize, usize)) {
+        (
+            self.selection.true_start(&self.lines),
+            self.selection.true_end(&self.lines),
+        )
     }
 
     pub fn path(&self) -> &Path {
@@ -74,86 +66,55 @@ impl Document {
 
 impl DocumentActionHandler for Document {
     fn move_left(&mut self) {
-        let true_cursor_x = self.true_cursor_x();
-
-        if true_cursor_x == 0 {
-            if self.cursor.y != 0 {
-                self.cursor.y -= 1;
-                self.cursor.x = self
-                    .lines
-                    .get(self.cursor.y as usize)
-                    .map(String::len)
-                    .unwrap_or(0) as u64;
-            }
-        } else {
-            self.cursor.x = true_cursor_x.saturating_sub(1);
-        }
+        self.selection.move_left(&self.lines);
     }
 
     fn move_right(&mut self) {
-        if self.cursor.x
-            >= self
-                .lines
-                .get(self.cursor.y as usize)
-                .map(String::len)
-                .unwrap_or(0) as u64
-        {
-            self.cursor.x = 0;
-            if self.cursor.y >= self.lines.len() as u64 {
-                self.cursor.y = self.lines.len() as u64;
-            } else {
-                self.cursor.y = self.cursor.y.saturating_add(1);
-            }
-        } else {
-            self.cursor.x = self.cursor.x.saturating_add(1)
-        }
+        self.selection.move_right(&self.lines);
     }
 
     fn move_up(&mut self) {
-        self.cursor.y = self.cursor.y.saturating_sub(1)
+        self.selection.move_up();
     }
 
     fn move_down(&mut self) {
-        if self.cursor.y >= self.lines.len() as u64 {
-            self.cursor.y = self.lines.len() as u64;
-        } else {
-            self.cursor.y = self.cursor.y.saturating_add(1);
-        }
+        self.selection.move_down(&self.lines);
     }
 
     fn insert(&mut self, ch: char) {
-        let true_cursor = self.true_cursor();
+        let true_start = self.selection.true_start(&self.lines);
 
-        let line = self.get_line_mut(true_cursor.y as usize);
+        let line = self.get_line_mut(true_start.1);
 
         let index = line
             .char_indices()
-            .nth(true_cursor.x as usize)
+            .nth(true_start.0)
             .map(|(i, _)| i)
             .unwrap_or(line.len());
 
         line.insert(index, ch);
-        self.cursor.x = true_cursor.x + 1;
+
+        self.selection.move_right(&self.lines);
 
         self.dirty = true;
     }
 
     fn delete_before(&mut self) {
-        self.move_left();
+        self.selection.move_left(&self.lines);
 
-        let true_cursor = self.true_cursor();
+        let true_start = self.selection.true_start(&self.lines);
 
-        let line = self.get_line_mut(true_cursor.y as usize);
+        let line = self.get_line_mut(true_start.1);
 
-        if true_cursor.x != line.chars().count() as u64 {
-            line.remove(true_cursor.x as usize);
+        if true_start.0 != line.chars().count() {
+            line.remove(true_start.0);
             self.dirty = true;
         } else {
-            if let Some(after_cursor) = (true_cursor.y + 1 < self.lines.len() as u64)
-                .then(|| self.lines.remove(true_cursor.y as usize + 1))
+            if let Some(after_cursor) =
+                (true_start.1 + 1 < self.lines.len()).then(|| self.lines.remove(true_start.1 + 1))
             {
                 self.lines
-                    .get_mut(true_cursor.y as usize)
+                    .get_mut(true_start.1)
                     .map(|line| line.push_str(&after_cursor));
                 self.dirty = true;
             }
@@ -161,18 +122,18 @@ impl DocumentActionHandler for Document {
     }
 
     fn insert_line_before_cursor(&mut self) {
-        let true_cursor = self.true_cursor();
+        let true_start = self.selection.true_start(&self.lines);
 
-        let line = self.get_line_mut(true_cursor.y as usize);
+        let line = self.get_line_mut(true_start.1);
 
         let after_cursor = line.split_off(
             line.char_indices()
-                .nth(true_cursor.x as usize)
+                .nth(true_start.0)
                 .map(|(i, _)| i)
                 .unwrap_or(line.len()),
         );
 
-        self.lines.insert(true_cursor.y as usize + 1, after_cursor);
+        self.lines.insert(true_start.1 + 1, after_cursor);
 
         self.move_right();
 

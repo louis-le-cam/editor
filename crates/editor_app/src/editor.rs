@@ -5,11 +5,11 @@ use editor_document::Document;
 use editor_mode::Mode;
 use editor_terminal::{Color, TermRect, TermSlice, TermVec};
 use editor_theme::Theme;
-use glam::{u16vec2, U64Vec2};
+use glam::u16vec2;
 
 pub struct Editor {
     document: Document,
-    offset: U64Vec2,
+    offset: (usize, usize),
 }
 
 impl Editor {
@@ -21,7 +21,9 @@ impl Editor {
     }
 
     pub fn draw(&mut self, theme: &Theme, mut term: TermSlice, mode: &Mode) {
-        let gutter_width = (number_width(self.document.lines().len() as u64) + 2) as u16;
+        self.update_offset(mode, term.rect().size);
+
+        let gutter_width = (number_width(self.document.lines().len()) + 2) as u16;
 
         self.draw_gutter(
             theme,
@@ -52,17 +54,19 @@ impl Editor {
     fn draw_gutter(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
 
-        for y in 0..size.y {
-            let line = self.offset.y + y as u64;
+        let (start, _) = self.document.selection();
 
-            if line == self.document.cursor().y {
+        for y in 0..size.y {
+            let line = self.offset.1 + y as usize;
+
+            if line == start.1 {
                 term.set_text_color(theme.gutter_current_line);
             } else {
                 term.set_text_color(theme.gutter_line);
             }
 
             let line_number = match line {
-                _ if line < self.document.lines().len() as u64 => {
+                _ if line < self.document.lines().len() => {
                     format!(
                         " {: >width$} ",
                         line + 1,
@@ -70,7 +74,7 @@ impl Editor {
                     )
                 }
 
-                _ if line == self.document.lines().len() as u64 => {
+                _ if line == self.document.lines().len() => {
                     format!(
                         " {: >width$} ",
                         '~',
@@ -89,6 +93,7 @@ impl Editor {
         let mode_abreviation = mode.abreviation();
 
         let path = self.document.path().display().to_string();
+        let (start, _) = self.document.selection();
 
         term.set_background_color(theme.code_info_background);
         term.set_text_color(theme.code_info_text);
@@ -103,13 +108,10 @@ impl Editor {
                     true => "[+]",
                     false => "   ",
                 },
-                self.document.cursor().y + 1,
-                self.document.cursor().x + 1,
+                start.1 + 1,
+                start.0 + 1,
                 width = (term.rect().width() as usize).saturating_sub(
-                    mode_abreviation.len()
-                        + path.len()
-                        + number_width(self.document.cursor().x + 1) as usize
-                        + 9
+                    mode_abreviation.len() + path.len() + number_width(start.0 + 1) + 9
                 )
             ),
         );
@@ -118,28 +120,28 @@ impl Editor {
     fn draw_code(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
 
+        let (start, _) = self.document.selection();
+
         term.set_background_color(theme.code_background);
         term.set_text_color(theme.code_text);
-
-        let true_cursor = self.document.true_cursor();
 
         for y in 0..size.y {
             let line = self
                 .document
                 .lines()
-                .get(y as usize + self.offset.y as usize)
+                .get(y as usize + self.offset.1)
                 .map(String::as_str)
                 .unwrap_or("");
 
             let mut chars = line
                 .chars()
-                .skip(self.offset.x as usize)
+                .skip(self.offset.0 as usize)
                 .chain(" ".chars().cycle());
 
-            if y as i64 == true_cursor.y as i64 - self.offset.y as i64 {
-                let before_cursor_len = true_cursor.x.saturating_sub(self.offset.x) as usize;
+            if y as isize == start.1 as isize - self.offset.1 as isize {
+                let before_cursor_len = start.0.saturating_sub(self.offset.0) as usize;
 
-                if true_cursor.x >= self.offset.x {
+                if start.0 >= self.offset.0 {
                     let before_cursor = (0..before_cursor_len)
                         .filter_map(|_| chars.next())
                         .collect::<String>();
@@ -176,31 +178,34 @@ impl Editor {
         action: &DocumentAction,
     ) {
         action.execute(&mut self.document);
-
-        self.update_offset(term.rect().size);
         self.draw(theme, term, mode);
     }
 
     /// Update `self.offset` if `self.document.cursor()` is near edges
-    fn update_offset(&mut self, size: TermVec) {
-        if self.document.cursor().x + 7 > self.offset.x + size.x as u64 {
-            self.offset.x = (self.document.cursor().x + 7).saturating_sub(size.x as u64);
+    fn update_offset(&mut self, mode: &Mode, size: TermVec) {
+        let cursor = match mode {
+            Mode::Normal => self.document.selection().1,
+            Mode::Insert => self.document.selection().0,
+        };
+
+        if cursor.0 + 7 > self.offset.0 + size.x as usize {
+            self.offset.0 = (cursor.0 + 7).saturating_sub(size.x as usize);
         }
 
-        if self.document.cursor().y + 4 > self.offset.y + size.y as u64 {
-            self.offset.y = (self.document.cursor().y + 4).saturating_sub(size.y as u64);
+        if cursor.1 + 4 > self.offset.1 + size.y as usize {
+            self.offset.1 = (cursor.1 + 4).saturating_sub(size.y as usize);
         }
 
-        if self.document.cursor().x < self.offset.x + 5 {
-            self.offset.x = self.document.cursor().x.saturating_sub(5);
+        if cursor.0 < self.offset.0 + 5 {
+            self.offset.0 = cursor.0.saturating_sub(5);
         }
 
-        if self.document.cursor().y < self.offset.y + 4 {
-            self.offset.y = self.document.cursor().y.saturating_sub(4);
+        if cursor.1 < self.offset.1 + 4 {
+            self.offset.1 = cursor.1.saturating_sub(4);
         }
     }
 }
 
-fn number_width(number: u64) -> u32 {
-    number.checked_ilog10().unwrap_or(0) + 1
+fn number_width(number: usize) -> usize {
+    number.checked_ilog10().unwrap_or(0) as usize + 1
 }
