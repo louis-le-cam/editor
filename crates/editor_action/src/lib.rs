@@ -8,7 +8,7 @@ macro_rules! actions {
     (
         enum Action {
             $($variant_name:ident => enum $enum_name:ident |$($fn_arg:ident : $fn_arg_type:ty),*| {
-                $($name:ident $(($($arg_name:ident : $arg_type:ty),+))? $code:block)*
+                $($name:ident $(($($arg_name:ident : $arg_type:ty),+))? $(, $string:literal)+ $code:block)*
             })+
         }
     ) => {
@@ -18,9 +18,9 @@ macro_rules! actions {
         }
 
         impl Action {
-            pub fn as_str(&self) -> &'static str {
+            pub fn as_strs(&self) -> &'static [&'static str] {
                 match self {
-                    $(Self::$variant_name(action) => action.as_str(),)*
+                    $(Self::$variant_name(action) => action.as_strs(),)*
                 }
             }
         }
@@ -39,10 +39,20 @@ macro_rules! actions {
                     }
                 }
 
-                pub fn as_str(&self) -> &'static str {
+                pub fn as_strs(&self) -> &'static [&'static str] {
                     paste::paste!{
                         match self {
-                            $(Self::$name $(($($arg_name),+))? => stringify!($name:snake),)*
+                            $(Self::$name $(($($arg_name),+))? => &[$($string),+],)*
+                        }
+                    }
+                }
+
+                // TODO: Support actions with args
+                pub fn from_str(str: &str) -> Option<Self> {
+                    paste::paste!{
+                        match str {
+                            $($($string)|+ => actions!(from_str, $name $(,($($arg_name),+))?),)*
+                            _ => None
                         }
                     }
                 }
@@ -55,24 +65,35 @@ macro_rules! actions {
             }
         )+
     };
+
+    (from_str, $name:ident, ($($arg_name:ident),+)) => {
+        None
+    };
+    (from_str, $name:ident) => {
+        Some(Self::$name)
+    };
 }
 
 actions! {
     enum Action {
         Command => enum Command |handler: &mut impl CommandHandler| {
-            Quit { handler.quit() }
-            EnterInsertMode { handler.enter_insert_mode() }
-            EnterNormalMode { handler.enter_normal_mode() }
+            Quit, "quit" { handler.quit() }
+            EnterInsertMode, "enter_insert_mode" { handler.enter_insert_mode() }
+            EnterNormalMode, "enter_normal_mode" { handler.enter_normal_mode() }
+            FocusEditor, "focus_editor" { handler.focus_editor() }
+            FocusCommandBar, "focus_command_bar" { handler.focus_command_bar() }
+            Validate, "validate" { handler.validate() }
+            Cancel, "cancel" { handler.cancel() }
         }
         Document => enum DocumentAction |document: &mut Document| {
-            MoveLeft { document.move_left(); }
-            MoveRight { document.move_right(); }
-            MoveUp { document.move_up(); }
-            MoveDown { document.move_down(); }
-            DeleteBefore { document.delete_before() }
-            Insert(char: char) { document.insert(*char) }
-            Write { document.write() }
-            InsertLineBeforeCursor { document.insert_line_before_cursor() }
+            MoveLeft, "move_left" { document.move_left(); }
+            MoveRight, "move_right" { document.move_right(); }
+            MoveUp, "move_up" { document.move_up(); }
+            MoveDown, "move_down" { document.move_down(); }
+            DeleteBefore, "delete_before" { document.delete_before() }
+            Insert(char: char), "insert"  { document.insert(*char) }
+            Write, "write" { document.write() }
+            InsertLineBeforeCursor, "insert_line_before_cursor" { document.insert_line_before_cursor() }
         }
     }
 }

@@ -9,6 +9,8 @@ pub struct Theme {
     pub gutter_background: Color,
     pub gutter_line: Color,
     pub gutter_current_line: Color,
+    pub command_bar_background: Color,
+    pub command_bar_text: Color,
 }
 impl Default for Theme {
     fn default() -> Self {
@@ -42,6 +44,8 @@ impl Default for Theme {
             gutter_background: dark_gray,
             gutter_line: light_gray,
             gutter_current_line: white,
+            command_bar_background: dark_gray,
+            command_bar_text: white,
         }
     }
 }

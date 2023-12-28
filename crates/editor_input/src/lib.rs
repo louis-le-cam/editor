@@ -1,5 +1,5 @@
 use editor_action::{Action, Command, DocumentAction};
-use editor_mode::Mode;
+use editor_mode::{Focused, Mode};
 use editor_terminal::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 #[derive(Debug)]
@@ -17,25 +17,47 @@ impl Input {
 pub struct Inputs {
     normal: Vec<(Input, Action)>,
     insert: Vec<(Input, Action)>,
+    text_box: Vec<(Input, Action)>,
 }
 
 impl Inputs {
-    pub fn key_event(&self, key_event: &KeyEvent, mode: &Mode) -> Option<Action> {
+    pub fn key_event(
+        &self,
+        key_event: &KeyEvent,
+        focused: &Focused,
+        mode: &Mode,
+    ) -> Option<Action> {
         if key_event.kind == KeyEventKind::Release {
             return None;
         }
 
-        match mode {
-            Mode::Normal => self
-                .normal
-                .iter()
-                .filter(|(input, _)| {
-                    input.key == key_event.code && input.modifier == key_event.modifiers
-                })
-                .map(|(_, action)| action.clone())
-                .next(),
-            Mode::Insert => self
-                .insert
+        match focused {
+            Focused::Editor => match mode {
+                Mode::Normal => self
+                    .normal
+                    .iter()
+                    .filter(|(input, _)| {
+                        input.key == key_event.code && input.modifier == key_event.modifiers
+                    })
+                    .map(|(_, action)| action.clone())
+                    .next(),
+                Mode::Insert => self
+                    .insert
+                    .iter()
+                    .filter(|(input, _)| {
+                        input.key == key_event.code && input.modifier == key_event.modifiers
+                    })
+                    .map(|(_, action)| action.clone())
+                    .next()
+                    .or_else(|| match (key_event.modifiers, key_event.code) {
+                        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(ch)) => {
+                            Some(DocumentAction::Insert(ch).into())
+                        }
+                        _ => None,
+                    }),
+            },
+            Focused::CommandBar => self
+                .text_box
                 .iter()
                 .filter(|(input, _)| {
                     input.key == key_event.code && input.modifier == key_event.modifiers
@@ -78,6 +100,7 @@ impl Default for Inputs {
             (Char('i'), NONE, Command::EnterInsertMode),
             (Char('s'), CONTROL, DocumentAction::Write),
             (Char('c'), CONTROL, Command::Quit),
+            (Char(':'), NONE, Command::FocusCommandBar),
         );
 
         let insert = keybinds!(
@@ -86,6 +109,18 @@ impl Default for Inputs {
             (Esc, NONE, Command::EnterNormalMode),
         );
 
-        Self { normal, insert }
+        let text_box = keybinds!(
+            (Enter, NONE, Command::Validate),
+            (Esc, NONE, Command::Cancel),
+            (Left, NONE, DocumentAction::MoveLeft),
+            (Right, NONE, DocumentAction::MoveRight),
+            (Char('h'), CONTROL, DocumentAction::DeleteBefore),
+        );
+
+        Self {
+            normal,
+            insert,
+            text_box,
+        }
     }
 }

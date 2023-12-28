@@ -95,7 +95,7 @@ impl Term {
     ///
     /// The size is cached so this doesn't require any io
     #[must_use]
-    pub fn size(&mut self) -> TermVec {
+    pub fn size(&self) -> TermVec {
         self.size
     }
 

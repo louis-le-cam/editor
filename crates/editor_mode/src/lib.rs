@@ -11,3 +11,9 @@ impl Mode {
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Focused {
+    Editor,
+    CommandBar,
+}

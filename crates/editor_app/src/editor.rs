@@ -82,8 +82,6 @@ impl Editor {
 
             term.set_background_color(theme.gutter_background);
             term.write_to((0, y), &line_number);
-            term.reset_text_color();
-            term.reset_background_color();
         }
     }
 
@@ -115,9 +113,6 @@ impl Editor {
                 )
             ),
         );
-
-        term.reset_background_color();
-        term.reset_text_color();
     }
 
     fn draw_code(&mut self, theme: &Theme, mut term: TermSlice) {
