@@ -111,6 +111,7 @@ impl Default for Inputs {
         );
 
         let text_box = keybinds!(
+            (Char('j'), CONTROL, Command::Validate),
             (Enter, NONE, Command::Validate),
             (Esc, NONE, Command::Cancel),
             (Left, NONE, DocumentAction::MoveLeft),
