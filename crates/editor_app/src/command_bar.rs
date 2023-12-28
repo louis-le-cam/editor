@@ -1,19 +1,18 @@
 use editor_action::{Command, DocumentAction};
+use editor_document::SingleLineDocument;
 use editor_mode::Focused;
 use editor_terminal::TermSlice;
 use editor_theme::Theme;
 use log::warn;
 
 pub struct CommandBar {
-    text: String,
-    cursor: usize,
+    document: SingleLineDocument,
 }
 
 impl CommandBar {
     pub fn new() -> Self {
         Self {
-            text: String::new(),
-            cursor: 0,
+            document: SingleLineDocument::new(),
         }
     }
 
@@ -23,15 +22,15 @@ impl CommandBar {
         if focused == Focused::CommandBar {
             let text = format!(
                 ":{:<width$}",
-                self.text,
+                self.document.line(),
                 width = (term.rect().width() as usize).saturating_sub(1)
             );
 
             let cursor_index = text
                 .char_indices()
-                .nth(self.cursor + 1)
+                .nth(self.document.cursor() + 1)
                 .map(|(i, _)| i)
-                .unwrap_or(self.text.len());
+                .unwrap_or(self.document.line().len());
 
             let (before_cursor, after) = text.split_at(cursor_index);
             let before_cursor_count = before_cursor.chars().count() as u16;
@@ -67,17 +66,13 @@ impl CommandBar {
     }
 
     pub fn validate(&mut self) -> Option<Command> {
-        let command = Command::from_str(&self.text);
-
-        self.text = String::new();
-        self.cursor = 0;
-
+        let command = Command::from_str(&self.document.line());
+        self.document.clear();
         command
     }
 
     pub fn cancel(&mut self) {
-        self.text = String::new();
-        self.cursor = 0;
+        self.document.clear();
     }
 
     pub(crate) fn execute(
@@ -87,39 +82,7 @@ impl CommandBar {
         term: TermSlice,
         document_action: &DocumentAction,
     ) {
-        match document_action {
-            DocumentAction::MoveLeft => self.cursor = self.cursor.saturating_sub(1),
-            DocumentAction::MoveRight => {
-                if self.cursor < self.text.len() {
-                    self.cursor += 1;
-                }
-            }
-            DocumentAction::DeleteBefore => {
-                if self.cursor > 0 {
-                    self.cursor -= 1;
-                    if let Some((i, _)) = self.text.char_indices().nth(self.cursor) {
-                        self.text.remove(i);
-                    }
-                }
-            }
-            DocumentAction::Insert(ch) => {
-                let i = self
-                    .text
-                    .char_indices()
-                    .nth(self.cursor)
-                    .map(|(i, _)| i)
-                    .unwrap_or(self.text.len());
-                self.cursor += 1;
-                self.text.insert(i, *ch);
-            }
-            _ => {
-                warn!(
-                    "The document action {} does nothing when command bar is focused",
-                    document_action.as_strs()[0]
-                );
-            }
-        }
-
+        document_action.execute(&mut self.document);
         self.draw(theme, focused, term);
     }
 }

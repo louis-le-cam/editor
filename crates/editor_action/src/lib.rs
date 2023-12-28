@@ -1,8 +1,8 @@
 mod command_handler;
+mod document_action_handler;
 
 pub use command_handler::CommandHandler;
-
-use editor_document::Document;
+pub use document_action_handler::DocumentActionHandler;
 
 macro_rules! actions {
     (
@@ -85,7 +85,7 @@ actions! {
             Validate, "validate" { handler.validate() }
             Cancel, "cancel" { handler.cancel() }
         }
-        Document => enum DocumentAction |document: &mut Document| {
+        Document => enum DocumentAction |document: &mut impl DocumentActionHandler| {
             MoveLeft, "move_left" { document.move_left(); }
             MoveRight, "move_right" { document.move_right(); }
             MoveUp, "move_up" { document.move_up(); }
