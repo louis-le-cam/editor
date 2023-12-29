@@ -1,14 +1,63 @@
+use std::cmp::Ordering;
+
 #[derive(Clone, Copy, Debug)]
 pub struct Selection {
+    true_start: (usize, usize),
+    true_end: (usize, usize),
+}
+
+impl Selection {
+    pub fn start(&self) -> (usize, usize) {
+        self.true_start
+    }
+
+    pub fn end(&self) -> (usize, usize) {
+        self.true_end
+    }
+
+    pub fn min(&self) -> (usize, usize) {
+        match self.true_start.1.cmp(&self.true_end.1) {
+            Ordering::Less => self.true_start,
+            Ordering::Equal => match self.true_start.0.cmp(&self.true_end.0) {
+                Ordering::Less => self.true_start,
+                Ordering::Equal => self.true_start,
+                Ordering::Greater => self.true_end,
+            },
+            Ordering::Greater => self.true_end,
+        }
+    }
+
+    pub fn max(&self) -> (usize, usize) {
+        match self.true_start.1.cmp(&self.true_end.1) {
+            Ordering::Less => self.true_end,
+            Ordering::Equal => match self.true_start.0.cmp(&self.true_end.0) {
+                Ordering::Less => self.true_end,
+                Ordering::Equal => self.true_end,
+                Ordering::Greater => self.true_start,
+            },
+            Ordering::Greater => self.true_start,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct InternalSelection {
     start: (usize, usize),
     end: (usize, usize),
 }
 
-impl Selection {
+impl InternalSelection {
     pub fn new() -> Self {
         Self {
             start: (0, 0),
             end: (0, 0),
+        }
+    }
+
+    pub fn to_selection(&self, lines: &[String]) -> Selection {
+        Selection {
+            true_start: self.true_start(lines),
+            true_end: self.true_end(lines),
         }
     }
 

@@ -7,12 +7,12 @@ use std::{
 use editor_action::DocumentActionHandler;
 use log::error;
 
-use crate::selection::Selection;
+use crate::{selection::InternalSelection, Selection};
 
 pub struct Document {
     path: PathBuf,
     lines: Vec<String>,
-    selection: Selection,
+    selection: InternalSelection,
     dirty: bool,
 }
 
@@ -29,7 +29,7 @@ impl Document {
         Self {
             lines,
             path,
-            selection: Selection::new(),
+            selection: InternalSelection::new(),
             dirty: false,
         }
     }
@@ -44,11 +44,8 @@ impl Document {
         &mut self.lines[index]
     }
 
-    pub fn selection(&self) -> ((usize, usize), (usize, usize)) {
-        (
-            self.selection.true_start(&self.lines),
-            self.selection.true_end(&self.lines),
-        )
+    pub fn selection(&self) -> Selection {
+        self.selection.to_selection(&self.lines)
     }
 
     pub fn path(&self) -> &Path {
@@ -57,6 +54,10 @@ impl Document {
 
     pub fn lines(&self) -> &Vec<String> {
         &self.lines
+    }
+
+    pub fn get_line(&self, index: usize) -> Option<&str> {
+        self.lines.get(index).map(|line| line.as_str())
     }
 
     pub fn dirty(&self) -> bool {
@@ -117,7 +118,11 @@ impl DocumentActionHandler for Document {
 
         line.insert(index, ch);
 
-        self.selection.move_selection_right(&self.lines);
+        if true_start.1 == self.selection.true_end(&self.lines).1 {
+            self.selection.move_selection_right(&self.lines);
+        } else {
+            self.selection.extend_start_right(&self.lines);
+        }
 
         self.dirty = true;
     }

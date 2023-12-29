@@ -21,7 +21,7 @@ impl Editor {
     }
 
     pub fn draw(&mut self, theme: &Theme, mut term: TermSlice, mode: &Mode) {
-        self.update_offset(mode, term.rect().size);
+        self.update_offset(term.rect().size);
 
         let gutter_width = (number_width(self.document.lines().len()) + 2) as u16;
 
@@ -54,12 +54,12 @@ impl Editor {
     fn draw_gutter(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
 
-        let (start, _) = self.document.selection();
+        let selection = self.document.selection();
 
         for y in 0..size.y {
             let line = self.offset.1 + y as usize;
 
-            if line == start.1 {
+            if line == selection.end().1 {
                 term.set_text_color(theme.gutter_current_line);
             } else {
                 term.set_text_color(theme.gutter_line);
@@ -93,7 +93,7 @@ impl Editor {
         let mode_abreviation = mode.abreviation();
 
         let path = self.document.path().display().to_string();
-        let (start, _) = self.document.selection();
+        let selection = self.document.selection();
 
         term.set_background_color(theme.code_info_background);
         term.set_text_color(theme.code_info_text);
@@ -108,10 +108,10 @@ impl Editor {
                     true => "[+]",
                     false => "   ",
                 },
-                start.1 + 1,
-                start.0 + 1,
+                selection.end().1 + 1,
+                selection.end().0 + 1,
                 width = (term.rect().width() as usize).saturating_sub(
-                    mode_abreviation.len() + path.len() + number_width(start.0 + 1) + 9
+                    mode_abreviation.len() + path.len() + number_width(selection.end().0 + 1) + 9
                 )
             ),
         );
@@ -120,7 +120,8 @@ impl Editor {
     fn draw_code(&mut self, theme: &Theme, mut term: TermSlice) {
         let size = term.rect().size;
 
-        let (start, end) = self.document.selection();
+        let selection = self.document.selection();
+        let (min, max) = (selection.min(), selection.max());
 
         term.set_background_color(theme.code_background);
         term.set_text_color(theme.code_text);
@@ -128,9 +129,7 @@ impl Editor {
         for y in 0..size.y {
             let line = self
                 .document
-                .lines()
-                .get(y as usize + self.offset.1)
-                .map(String::as_str)
+                .get_line(y as usize + self.offset.1)
                 .unwrap_or("");
 
             let mut chars = line
@@ -140,18 +139,18 @@ impl Editor {
 
             let offseted_y = y as usize + self.offset.1;
 
-            if (start.1.min(end.1)..start.1.max(end.1) + 1).contains(&offseted_y) {
-                let before_selection_len = if offseted_y == start.1 {
-                    start.0.saturating_sub(self.offset.0) as usize
+            if (min.1..max.1 + 1).contains(&offseted_y) {
+                let before_selection_len = if offseted_y == min.1 {
+                    min.0.saturating_sub(self.offset.0) as usize
                 } else {
                     0
                 };
 
-                let under_selection_len = if offseted_y == end.1 {
+                let under_selection_len = if offseted_y == max.1 {
                     (size.x as usize).saturating_sub(
                         before_selection_len
                             + ((size.x as usize)
-                                .saturating_sub(end.0.saturating_sub(self.offset.0) + 1)),
+                                .saturating_sub(max.0.saturating_sub(self.offset.0) + 1)),
                     )
                 } else {
                     (size.x as usize).saturating_sub(before_selection_len)
@@ -208,11 +207,8 @@ impl Editor {
     }
 
     /// Update `self.offset` if `self.document.cursor()` is near edges
-    fn update_offset(&mut self, mode: &Mode, size: TermVec) {
-        let cursor = match mode {
-            Mode::Normal | Mode::Selection => self.document.selection().1,
-            Mode::Insert => self.document.selection().0,
-        };
+    fn update_offset(&mut self, size: TermVec) {
+        let cursor = self.document.selection().end();
 
         if cursor.0 + 7 > self.offset.0 + size.x as usize {
             self.offset.0 = (cursor.0 + 7).saturating_sub(size.x as usize);
