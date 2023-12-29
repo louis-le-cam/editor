@@ -5,7 +5,7 @@ A terminal modal editor written in rust inspired by [Helix](https://github.com/h
 - [ ] Command completion
 - [x] Selection
 - [ ] Multiple cursors
-- [ ] Selection mode
+- [x] Selection mode
 - [ ] More editing actions
 - [ ] Fuzzy file picker
 - [ ] Tree file picker
