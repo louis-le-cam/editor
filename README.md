@@ -13,4 +13,12 @@ A terminal modal editor written in rust inspired by [Helix](https://github.com/h
 - [ ] View splitting
 - [ ] Editable config
 - [ ] Lsp support
-- [ ] Code coloration
+- [ ] Code coloraion
+- [ ] Git integration
+  - [ ] Diff gutter indicator
+  - [ ] Git actions (init add commit push ...)
+  - [ ] Commit selection with diff views
+  - [ ] Conflict resolve (don't now how it works but i will figure it out)
+- [ ] Rust module view (where folder module are not 2 separate items)
+  - [ ] Module view
+  - [ ] Multicrate support
