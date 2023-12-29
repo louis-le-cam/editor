@@ -2,7 +2,7 @@ A terminal modal editor written in rust inspired by [Helix](https://github.com/h
 
 # Todo:
 - [x] Bottom command bar
-- [ ] Command arguments
+- [ ] Actiong arguments parsing
 - [ ] Command completion
 - [x] Selection
 - [ ] Multiple cursors
