@@ -59,8 +59,8 @@ actions!{
             MoveUp, "move_up";
             MoveDown, "move_down";
         }
-      pub Write, "write", "w";
-      pub Quit, "quit", "q";
+        pub Write, "write", "w";
+        pub Quit, "quit", "q";
     }
 }
 ```
