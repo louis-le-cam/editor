@@ -8,6 +8,7 @@ A terminal modal editor written in rust inspired by [Helix](https://github.com/h
 - [ ] Multiple cursors
 - [x] Selection mode
 - [ ] More editing actions
+- [ ] Submodes (like helix goto mode or space mode)
 - [ ] Fuzzy file picker
 - [ ] Tree file picker
 - [ ] Integrated terminal
