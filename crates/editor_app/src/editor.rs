@@ -195,14 +195,8 @@ impl Editor {
         }
     }
 
-    pub fn execute(
-        &mut self,
-        theme: &Theme,
-        term: TermSlice,
-        mode: &Mode,
-        action: &DocumentAction,
-    ) {
-        action.execute(&mut self.document);
+    pub fn execute(&mut self, theme: &Theme, term: TermSlice, mode: &Mode, action: DocumentAction) {
+        self.document.handle_action(action);
         self.draw(theme, term, mode);
     }
 

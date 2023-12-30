@@ -1,5 +1,4 @@
-use editor_action::DocumentActionHandler;
-use log::warn;
+use editor_action::SingleLineDocumentAction;
 
 pub struct SingleLineDocument {
     line: String,
@@ -26,75 +25,35 @@ impl SingleLineDocument {
         self.line = String::new();
         self.cursor = 0;
     }
-}
 
-impl DocumentActionHandler for SingleLineDocument {
-    fn move_left(&mut self) {
-        self.cursor = self.cursor.saturating_sub(1)
-    }
-    fn move_right(&mut self) {
-        if self.cursor < self.line.len() {
-            self.cursor += 1;
-        }
-    }
-    fn move_up(&mut self) {
-        warn!("Can't move up on single line document");
-    }
-    fn move_down(&mut self) {
-        warn!("Can't move down on single line document");
-    }
+    pub fn handle_action(&mut self, action: SingleLineDocumentAction) {
+        use editor_action::SingleLineDocumentAction::*;
 
-    fn extend_end_left(&mut self) {
-        warn!("Can't extend end left on single line document");
-    }
-    fn extend_end_right(&mut self) {
-        warn!("Can't extend end right on single line document");
-    }
-    fn extend_end_up(&mut self) {
-        warn!("Can't extend end up on single line document");
-    }
-    fn extend_end_down(&mut self) {
-        warn!("Can't extend end down on single line document");
-    }
-
-    fn move_selection_left(&mut self) {
-        warn!("Can't selection left on single line document");
-    }
-    fn move_selection_right(&mut self) {
-        warn!("Can't selection right on single line document");
-    }
-    fn move_selection_up(&mut self) {
-        warn!("Can't selection up on single line document");
-    }
-    fn move_selection_down(&mut self) {
-        warn!("Can't selection down on single line document");
-    }
-
-    fn insert(&mut self, ch: char) {
-        let i = self
-            .line
-            .char_indices()
-            .nth(self.cursor)
-            .map(|(i, _)| i)
-            .unwrap_or(self.line.len());
-        self.cursor += 1;
-        self.line.insert(i, ch);
-    }
-
-    fn delete_before(&mut self) {
-        if self.cursor > 0 {
-            self.cursor -= 1;
-            if let Some((i, _)) = self.line.char_indices().nth(self.cursor) {
-                self.line.remove(i);
+        match action {
+            MoveLeft => self.cursor = self.cursor.saturating_sub(1),
+            MoveRight => {
+                if self.cursor < self.line.len() {
+                    self.cursor += 1;
+                }
+            }
+            Insert { char } => {
+                let i = self
+                    .line
+                    .char_indices()
+                    .nth(self.cursor)
+                    .map(|(i, _)| i)
+                    .unwrap_or(self.line.len());
+                self.cursor += 1;
+                self.line.insert(i, char);
+            }
+            DeleteBefore => {
+                if self.cursor > 0 {
+                    self.cursor -= 1;
+                    if let Some((i, _)) = self.line.char_indices().nth(self.cursor) {
+                        self.line.remove(i);
+                    }
+                }
             }
         }
-    }
-
-    fn insert_line_before_cursor(&mut self) {
-        warn!("Can't insert line before cursor on single line document");
-    }
-
-    fn write(&mut self) {
-        warn!("Can't write single line document");
     }
 }

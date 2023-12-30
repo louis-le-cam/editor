@@ -1,4 +1,4 @@
-use editor_action::{Command, DocumentAction};
+use editor_action::{Action, SingleLineDocumentAction};
 use editor_document::SingleLineDocument;
 use editor_mode::Focused;
 use editor_terminal::TermSlice;
@@ -64,10 +64,10 @@ impl CommandBar {
         }
     }
 
-    pub fn validate(&mut self) -> Option<Command> {
-        let command = Command::from_str(&self.document.line());
+    pub fn validate(&mut self) -> Option<Action> {
+        let action = Action::parse(&self.document.line());
         self.document.clear();
-        command
+        action
     }
 
     pub fn cancel(&mut self) {
@@ -79,9 +79,9 @@ impl CommandBar {
         theme: &Theme,
         focused: Focused,
         term: TermSlice,
-        document_action: &DocumentAction,
+        document_action: SingleLineDocumentAction,
     ) {
-        document_action.execute(&mut self.document);
+        self.document.handle_action(document_action);
         self.draw(theme, focused, term);
     }
 }

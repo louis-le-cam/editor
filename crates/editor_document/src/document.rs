@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use editor_action::DocumentActionHandler;
+use editor_action::DocumentAction;
 use log::error;
 
 use crate::{selection::InternalSelection, Selection};
@@ -63,129 +63,107 @@ impl Document {
     pub fn dirty(&self) -> bool {
         self.dirty
     }
-}
 
-impl DocumentActionHandler for Document {
-    fn move_left(&mut self) {
-        self.selection.move_left(&self.lines);
-    }
-    fn move_right(&mut self) {
-        self.selection.move_right(&self.lines);
-    }
-    fn move_up(&mut self) {
-        self.selection.move_up();
-    }
-    fn move_down(&mut self) {
-        self.selection.move_down(&self.lines);
-    }
+    pub fn handle_action(&mut self, action: DocumentAction) {
+        use editor_action::{DocumentAction::*, SingleLineDocumentAction::*};
 
-    fn extend_end_left(&mut self) {
-        self.selection.extend_end_left(&self.lines);
-    }
-    fn extend_end_right(&mut self) {
-        self.selection.extend_end_right(&self.lines);
-    }
-    fn extend_end_up(&mut self) {
-        self.selection.extend_end_up();
-    }
-    fn extend_end_down(&mut self) {
-        self.selection.extend_end_down(&self.lines);
-    }
+        match action {
+            SingleLine(action) => match action {
+                MoveLeft => self.selection.move_left(&self.lines),
+                MoveRight => self.selection.move_right(&self.lines),
+                Insert { char } => {
+                    let true_start = self.selection.true_start(&self.lines);
 
-    fn move_selection_left(&mut self) {
-        self.selection.move_selection_left(&self.lines);
-    }
-    fn move_selection_right(&mut self) {
-        self.selection.move_selection_right(&self.lines);
-    }
-    fn move_selection_up(&mut self) {
-        self.selection.move_selection_up();
-    }
-    fn move_selection_down(&mut self) {
-        self.selection.move_selection_down(&self.lines);
-    }
+                    let line = self.get_line_mut(true_start.1);
 
-    fn insert(&mut self, ch: char) {
-        let true_start = self.selection.true_start(&self.lines);
+                    let index = line
+                        .char_indices()
+                        .nth(true_start.0)
+                        .map(|(i, _)| i)
+                        .unwrap_or(line.len());
 
-        let line = self.get_line_mut(true_start.1);
+                    line.insert(index, char);
 
-        let index = line
-            .char_indices()
-            .nth(true_start.0)
-            .map(|(i, _)| i)
-            .unwrap_or(line.len());
+                    if true_start.1 == self.selection.true_end(&self.lines).1 {
+                        self.selection.move_selection_right(&self.lines);
+                    } else {
+                        self.selection.extend_start_right(&self.lines);
+                    }
 
-        line.insert(index, ch);
+                    self.dirty = true;
+                }
+                DeleteBefore => {
+                    self.selection.extend_start_left(&self.lines);
+                    if self.selection.true_start(&self.lines).1
+                        == self.selection.true_end(&self.lines).1
+                    {
+                        self.selection.extend_end_left(&self.lines);
+                    }
 
-        if true_start.1 == self.selection.true_end(&self.lines).1 {
-            self.selection.move_selection_right(&self.lines);
-        } else {
-            self.selection.extend_start_right(&self.lines);
-        }
+                    let true_start = self.selection.true_start(&self.lines);
 
-        self.dirty = true;
-    }
+                    let line = self.get_line_mut(true_start.1);
 
-    fn delete_before(&mut self) {
-        self.selection.extend_start_left(&self.lines);
-        if self.selection.true_start(&self.lines).1 == self.selection.true_end(&self.lines).1 {
-            self.selection.extend_end_left(&self.lines);
-        }
+                    if true_start.0 != line.chars().count() {
+                        line.remove(true_start.0);
+                        self.dirty = true;
+                    } else {
+                        if let Some(after_cursor) = (true_start.1 + 1 < self.lines.len())
+                            .then(|| self.lines.remove(true_start.1 + 1))
+                        {
+                            self.selection.extend_end_up();
+                            self.lines
+                                .get_mut(true_start.1)
+                                .map(|line| line.push_str(&after_cursor));
+                            self.dirty = true;
+                        }
+                    }
+                }
+            },
+            MoveUp => self.selection.move_up(),
+            MoveDown => self.selection.move_down(&self.lines),
+            ExtendEndLeft => self.selection.extend_end_left(&self.lines),
+            ExtendEndRight => self.selection.extend_end_right(&self.lines),
+            ExtendEndUp => self.selection.extend_end_up(),
+            ExtendEndDown => self.selection.extend_end_down(&self.lines),
+            MoveSelectionLeft => self.selection.move_selection_left(&self.lines),
+            MoveSelectionRight => self.selection.move_selection_right(&self.lines),
+            MoveSelectionUp => self.selection.move_selection_up(),
+            MoveSelectionDown => self.selection.move_selection_down(&self.lines),
+            InsertLineBeforeCursor => {
+                let true_start = self.selection.true_start(&self.lines);
 
-        let true_start = self.selection.true_start(&self.lines);
+                let line = self.get_line_mut(true_start.1);
 
-        let line = self.get_line_mut(true_start.1);
+                let after_cursor = line.split_off(
+                    line.char_indices()
+                        .nth(true_start.0)
+                        .map(|(i, _)| i)
+                        .unwrap_or(line.len()),
+                );
 
-        if true_start.0 != line.chars().count() {
-            line.remove(true_start.0);
-            self.dirty = true;
-        } else {
-            if let Some(after_cursor) =
-                (true_start.1 + 1 < self.lines.len()).then(|| self.lines.remove(true_start.1 + 1))
-            {
-                self.selection.extend_end_up();
-                self.lines
-                    .get_mut(true_start.1)
-                    .map(|line| line.push_str(&after_cursor));
+                self.lines.insert(true_start.1 + 1, after_cursor);
+
+                self.selection.extend_start_right(&self.lines);
+                self.selection.extend_end_down(&self.lines);
+
                 self.dirty = true;
             }
+            Write => {
+                if !self.dirty {
+                    return;
+                }
+
+                if let Err(err) = fs::write(&self.path, self.lines.join("\n")) {
+                    error!(
+                        "Failed to write document to {}, {:?}",
+                        self.path.display(),
+                        err
+                    );
+                } else {
+                    self.dirty = false;
+                };
+            }
         }
-    }
-
-    fn insert_line_before_cursor(&mut self) {
-        let true_start = self.selection.true_start(&self.lines);
-
-        let line = self.get_line_mut(true_start.1);
-
-        let after_cursor = line.split_off(
-            line.char_indices()
-                .nth(true_start.0)
-                .map(|(i, _)| i)
-                .unwrap_or(line.len()),
-        );
-
-        self.lines.insert(true_start.1 + 1, after_cursor);
-
-        self.selection.extend_start_right(&self.lines);
-        self.selection.extend_end_down(&self.lines);
-
-        self.dirty = true;
-    }
-
-    fn write(&mut self) {
-        if !self.dirty {
-            return;
-        }
-
-        if let Err(err) = fs::write(&self.path, self.lines.join("\n")) {
-            error!(
-                "Failed to write document to {}, {:?}",
-                self.path.display(),
-                err
-            );
-        } else {
-            self.dirty = false;
-        };
     }
 }

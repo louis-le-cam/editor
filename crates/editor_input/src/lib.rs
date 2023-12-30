@@ -1,4 +1,4 @@
-use editor_action::{Action, Command, DocumentAction};
+use editor_action::{Action, DocumentAction, SingleLineDocumentAction};
 use editor_mode::{Focused, Mode};
 use editor_terminal::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
@@ -51,8 +51,8 @@ impl Inputs {
                     .map(|(_, action)| action.clone())
                     .next()
                     .or_else(|| match (key_event.modifiers, key_event.code) {
-                        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(ch)) => {
-                            Some(DocumentAction::Insert(ch).into())
+                        (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(char)) => {
+                            Some(SingleLineDocumentAction::Insert { char }.into())
                         }
                         _ => None,
                     }),
@@ -75,7 +75,7 @@ impl Inputs {
                 .next()
                 .or_else(|| match (key_event.modifiers, key_event.code) {
                     (KeyModifiers::NONE | KeyModifiers::SHIFT, KeyCode::Char(ch)) => {
-                        Some(DocumentAction::Insert(ch).into())
+                        Some(SingleLineDocumentAction::Insert { char: ch }.into())
                     }
                     _ => None,
                 }),
@@ -98,26 +98,26 @@ impl Default for Inputs {
         }
 
         let normal = keybinds!(
-            (Left, NONE, DocumentAction::MoveLeft),
-            (Right, NONE, DocumentAction::MoveRight),
+            (Left, NONE, SingleLineDocumentAction::MoveLeft),
+            (Right, NONE, SingleLineDocumentAction::MoveRight),
             (Up, NONE, DocumentAction::MoveUp),
             (Down, NONE, DocumentAction::MoveDown),
-            (Char('h'), NONE, DocumentAction::MoveLeft),
-            (Char('l'), NONE, DocumentAction::MoveRight),
+            (Char('h'), NONE, SingleLineDocumentAction::MoveLeft),
+            (Char('l'), NONE, SingleLineDocumentAction::MoveRight),
             (Char('k'), NONE, DocumentAction::MoveUp),
             (Char('j'), NONE, DocumentAction::MoveDown),
-            (Char('i'), NONE, Command::EnterInsertMode),
-            (Char('v'), NONE, Command::EnterSelectionMode),
+            (Char('i'), NONE, Action::EnterInsertMode),
+            (Char('v'), NONE, Action::EnterSelectionMode),
             (Char('s'), CONTROL, DocumentAction::Write),
-            (Char(':'), NONE, Command::FocusCommandBar),
+            (Char(':'), NONE, Action::FocusCommandBar),
         );
 
         let insert = keybinds!(
-            (Char('h'), CONTROL, DocumentAction::DeleteBefore),
-            (Backspace, NONE, DocumentAction::DeleteBefore),
+            (Char('h'), CONTROL, SingleLineDocumentAction::DeleteBefore),
+            (Backspace, NONE, SingleLineDocumentAction::DeleteBefore),
             (Char('j'), CONTROL, DocumentAction::InsertLineBeforeCursor),
             (Enter, CONTROL, DocumentAction::InsertLineBeforeCursor),
-            (Esc, NONE, Command::EnterNormalMode),
+            (Esc, NONE, Action::EnterNormalMode),
         );
 
         let selection = keybinds!(
@@ -129,19 +129,19 @@ impl Default for Inputs {
             (Char('l'), NONE, DocumentAction::ExtendEndRight),
             (Char('k'), NONE, DocumentAction::ExtendEndUp),
             (Char('j'), NONE, DocumentAction::ExtendEndDown),
-            (Char('i'), NONE, Command::EnterInsertMode),
-            (Esc, NONE, Command::EnterNormalMode),
-            (Char(':'), NONE, Command::FocusCommandBar),
+            (Char('i'), NONE, Action::EnterInsertMode),
+            (Esc, NONE, Action::EnterNormalMode),
+            (Char(':'), NONE, Action::FocusCommandBar),
         );
 
         let text_box = keybinds!(
-            (Char('j'), CONTROL, Command::Validate),
-            (Enter, NONE, Command::Validate),
-            (Esc, NONE, Command::Cancel),
-            (Left, NONE, DocumentAction::MoveLeft),
-            (Right, NONE, DocumentAction::MoveRight),
-            (Char('h'), CONTROL, DocumentAction::DeleteBefore),
-            (Backspace, NONE, DocumentAction::DeleteBefore),
+            (Char('j'), CONTROL, Action::Validate),
+            (Enter, NONE, Action::Validate),
+            (Esc, NONE, Action::Cancel),
+            (Left, NONE, SingleLineDocumentAction::MoveLeft),
+            (Right, NONE, SingleLineDocumentAction::MoveRight),
+            (Char('h'), CONTROL, SingleLineDocumentAction::DeleteBefore),
+            (Backspace, NONE, SingleLineDocumentAction::DeleteBefore),
         );
 
         Self {
