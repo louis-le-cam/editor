@@ -1,7 +1,6 @@
 mod rect;
 mod slice;
 mod terminal;
-mod vector;
 
 pub use crossterm::{
     event::{
@@ -11,4 +10,4 @@ pub use crossterm::{
     style::Color,
 };
 
-pub use crate::{rect::TermRect, slice::TermSlice, terminal::Term, vector::TermVec};
+pub use crate::{rect::TermRect, slice::TermSlice, terminal::Term};

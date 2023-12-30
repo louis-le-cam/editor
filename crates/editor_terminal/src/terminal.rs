@@ -12,9 +12,10 @@ use crossterm::{
     },
     ExecutableCommand, QueueableCommand,
 };
+use glam::U16Vec2;
 use log::error;
 
-use crate::{TermRect, TermSlice, TermVec};
+use crate::{TermRect, TermSlice};
 
 /// Exposes some terminal apis for user interface purposes
 ///
@@ -40,7 +41,7 @@ use crate::{TermRect, TermSlice, TermVec};
 /// ```
 pub struct Term {
     stdout: Stdout,
-    size: TermVec,
+    size: U16Vec2,
 }
 
 impl Term {
@@ -95,7 +96,7 @@ impl Term {
     ///
     /// The size is cached so this doesn't require any io
     #[must_use]
-    pub fn size(&self) -> TermVec {
+    pub fn size(&self) -> U16Vec2 {
         self.size
     }
 

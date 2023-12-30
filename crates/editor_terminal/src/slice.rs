@@ -5,9 +5,10 @@ use crossterm::{
     style::{Color, SetBackgroundColor, SetForegroundColor, SetUnderlineColor},
     QueueableCommand,
 };
+use glam::U16Vec2;
 use log::error;
 
-use crate::{TermRect, TermVec};
+use crate::TermRect;
 
 /// Represent a rectangular region of terminal
 /// Writing to this slice will be offseted by the position of the rect and restricted by its size
@@ -45,8 +46,8 @@ impl TermSlice {
 
     /// Write the string to the given position position in the terminal (offseted by [`TermSlice::rect`])
     /// The action will only take effect after flushing the terminal, see [`Term::flush`]
-    pub fn write_to(&mut self, pos: impl Into<TermVec>, str: &str) {
-        let pos: TermVec = pos.into();
+    pub fn write_to(&mut self, pos: impl Into<U16Vec2>, str: &str) {
+        let pos: U16Vec2 = pos.into();
 
         if pos.y >= self.rect.heigth() {
             return;
@@ -62,8 +63,8 @@ impl TermSlice {
 
     /// Move the terminal cursor to the specified position
     /// The action will only take effect after flushing the terminal, see [`Term::flush`]
-    fn move_to(&mut self, pos: TermVec) {
-        let pos: TermVec = pos.into();
+    fn move_to(&mut self, pos: U16Vec2) {
+        let pos: U16Vec2 = pos.into();
         if let Err(err) = self.stdout.queue(MoveTo(pos.x, pos.y)) {
             error!("Failed to move terminal cursor: {:?}", err);
         }

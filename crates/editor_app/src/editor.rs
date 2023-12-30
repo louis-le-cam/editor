@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use editor_action::DocumentAction;
 use editor_document::Document;
 use editor_mode::Mode;
-use editor_terminal::{Color, TermRect, TermSlice, TermVec};
+use editor_terminal::{Color, TermRect, TermSlice};
 use editor_theme::Theme;
-use glam::u16vec2;
+use glam::{u16vec2, U16Vec2};
 
 pub struct Editor {
     document: Document,
@@ -207,7 +207,7 @@ impl Editor {
     }
 
     /// Update `self.offset` if `self.document.cursor()` is near edges
-    fn update_offset(&mut self, size: TermVec) {
+    fn update_offset(&mut self, size: U16Vec2) {
         let cursor = self.document.selection().end();
 
         if cursor.0 + 7 > self.offset.0 + size.x as usize {

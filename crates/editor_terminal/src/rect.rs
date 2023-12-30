@@ -1,13 +1,13 @@
-use crate::vector::TermVec;
+use glam::U16Vec2;
 
 /// Represent a rectangle with terminal units (`u16`)
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug, Hash)]
 pub struct TermRect {
-    pub pos: TermVec,
-    pub size: TermVec,
+    pub pos: U16Vec2,
+    pub size: U16Vec2,
 }
 impl TermRect {
-    pub fn new(pos: impl Into<TermVec>, size: impl Into<TermVec>) -> Self {
+    pub fn new(pos: impl Into<U16Vec2>, size: impl Into<U16Vec2>) -> Self {
         Self {
             pos: pos.into(),
             size: size.into(),
