@@ -20,7 +20,7 @@ impl Editor {
         }
     }
 
-    pub fn draw(&mut self, theme: &Theme, mut term: TermSlice, mode: &Mode) {
+    pub fn draw(&mut self, theme: &Theme, mut term: TermSlice, mode: Mode) {
         self.update_offset(term.rect().size);
 
         let gutter_width = (number_width(self.document.lines().len()) + 2) as u16;
@@ -89,7 +89,7 @@ impl Editor {
         }
     }
 
-    fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice, mode: &Mode) {
+    fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice, mode: Mode) {
         let mode_abreviation = mode.abreviation();
 
         let path = self.document.path().display().to_string();
@@ -195,7 +195,13 @@ impl Editor {
         }
     }
 
-    pub fn execute(&mut self, theme: &Theme, term: TermSlice, mode: &Mode, action: DocumentAction) {
+    pub fn handle_action(
+        &mut self,
+        theme: &Theme,
+        term: TermSlice,
+        mode: Mode,
+        action: DocumentAction,
+    ) {
         self.document.handle_action(action);
         self.draw(theme, term, mode);
     }

@@ -74,7 +74,7 @@ impl CommandBar {
         self.document.clear();
     }
 
-    pub(crate) fn execute(
+    pub fn handle_action(
         &mut self,
         theme: &Theme,
         focused: Focused,

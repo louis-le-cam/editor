@@ -22,12 +22,7 @@ pub struct Inputs {
 }
 
 impl Inputs {
-    pub fn key_event(
-        &self,
-        key_event: &KeyEvent,
-        focused: &Focused,
-        mode: &Mode,
-    ) -> Option<Action> {
+    pub fn key_event(&self, key_event: &KeyEvent, focused: Focused, mode: Mode) -> Option<Action> {
         if key_event.kind == KeyEventKind::Release {
             return None;
         }

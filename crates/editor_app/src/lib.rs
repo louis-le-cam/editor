@@ -57,7 +57,7 @@ impl App {
 
     fn draw_editor(&mut self) {
         self.editor
-            .draw(&self.theme, self.term.slice(self.editor_rect()), &self.mode);
+            .draw(&self.theme, self.term.slice(self.editor_rect()), self.mode);
     }
 
     fn draw_command_bar(&mut self) {
@@ -82,16 +82,12 @@ impl App {
     fn handle_event(&mut self, event: &Event) {
         match event {
             Event::Key(key_event) => {
-                self.execute(self.inputs.key_event(&key_event, &self.focused, &self.mode))
+                if let Some(action) = self.inputs.key_event(&key_event, self.focused, self.mode) {
+                    self.handle_action(action);
+                }
             }
             Event::Resize(_, _) => self.draw(),
             _ => {}
-        }
-    }
-
-    fn execute(&mut self, action: Option<Action>) {
-        if let Some(action) = action {
-            self.handle_action(action);
         }
     }
 
@@ -100,14 +96,14 @@ impl App {
 
         match action {
             Document(action) => match self.focused {
-                Focused::Editor => self.editor.execute(
+                Focused::Editor => self.editor.handle_action(
                     &self.theme,
                     self.term.slice(self.editor_rect()),
-                    &self.mode,
+                    self.mode,
                     action,
                 ),
                 Focused::CommandBar => match action {
-                    SingleLine(action) => self.command_bar.execute(
+                    SingleLine(action) => self.command_bar.handle_action(
                         &self.theme,
                         self.focused,
                         self.term.slice(self.command_bar_rect()),
@@ -124,9 +120,10 @@ impl App {
                     warn!("Validate command does nothing when editor is focused")
                 }
                 Focused::CommandBar => {
-                    self.execute(Some(Action::FocusEditor.into()));
-                    let command = self.command_bar.validate();
-                    self.execute(command.map(Into::into));
+                    self.handle_action(Action::FocusEditor.into());
+                    if let Some(command) = self.command_bar.validate() {
+                        self.handle_action(command);
+                    }
                 }
             },
             Cancel => match self.focused {
@@ -134,7 +131,7 @@ impl App {
                     warn!("Cancel command does nothing when editor is focused")
                 }
                 Focused::CommandBar => {
-                    self.execute(Some(Action::FocusEditor.into()));
+                    self.handle_action(Action::FocusEditor.into());
                     self.command_bar.cancel();
                 }
             },

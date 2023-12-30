@@ -39,7 +39,7 @@ use crate::{TermRect, TermSlice, TermVec};
 /// }
 /// ```
 pub struct Term {
-    pub(crate) stdout: Stdout,
+    stdout: Stdout,
     size: TermVec,
 }
 
