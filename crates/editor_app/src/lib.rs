@@ -113,6 +113,7 @@ impl App {
                 self.editor.document = editor_document::Document::from_path(path.into());
                 self.draw();
             }
+            Redraw => self.draw(),
             Validate => match self.focused {
                 Focused::Editor => {
                     warn!("Validate command does nothing when editor is focused")

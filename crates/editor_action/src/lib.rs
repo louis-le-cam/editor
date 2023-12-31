@@ -229,6 +229,7 @@ actions! {
         }
         pub Quit, "quit", "q";
         pub Open{path: String}, "open", "o";
+        pub Redraw, "redraw";
         Validate, "validate";
         Cancel, "cancel";
         EnterNormalMode, "enter_normal_mode";
