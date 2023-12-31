@@ -40,7 +40,7 @@ macro_rules! actions {
         { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         pub $variant:ident $({
-            $($field:ident : $field_ty:ident),*
+            $($field:ident : $field_ty:ty),*
         })? $(,$string:literal)+;
         $($tail:tt)*
     ) => {
@@ -55,7 +55,16 @@ macro_rules! actions {
             { $parse_args $($parse)* if matches!($parse_args.get(0), $(Some(&$string))|+) {
                 #[allow(unused_variables, unused_mut)]
                 let mut arg_index = 0;
-                return Some(Self::$variant $({$($field: actions!(@parse_arg $parse_args ({arg_index += 1; arg_index}) $field_ty))*})?);
+                return Some(Self::$variant $({
+                    $($field: match ArgumentParse::parse(
+                        match $parse_args.get({arg_index += 1; arg_index}) {
+                            Some(arg) => arg,
+                            None => return None,
+                        }) {
+                            Some(arg) => arg,
+                            None => return None,
+                        })*
+                })?);
             } }
             $enum_name $($tail)*
         }
@@ -70,7 +79,7 @@ macro_rules! actions {
         { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         $variant:ident $({
-            $($field:ident : $field_ty:ident),*
+            $($field:ident : $field_ty:ty),*
         })? $(,$string:literal),+;
         $($tail:tt)*
     ) => {
@@ -85,7 +94,16 @@ macro_rules! actions {
             { $parse_args $($parse)* if matches!($parse_args.get(0), $(Some(&$string))|+) {
                 #[allow(unused_variables, unused_mut)]
                 let mut arg_index = 0;
-                return Some(Self::$variant $({$($field: actions!(@parse_arg $parse_args ({arg_index += 1; arg_index}) $field_ty))*})?);
+                return Some(Self::$variant $({
+                    $($field: match ArgumentParse::parse(
+                        match $parse_args.get({arg_index += 1; arg_index}) {
+                            Some(arg) => arg,
+                            None => return None,
+                        }) {
+                            Some(arg) => arg,
+                            None => return None,
+                        })*
+                })?);
             } }
             $enum_name
             $($tail)*
@@ -166,42 +184,6 @@ macro_rules! actions {
     (@from_impl_inner $value:ident) => {
         $value
     };
-
-    // (@if_has_fields ($($field:ident)*) $if_code:block else $else_code:block) => {
-    //     $if_code
-    // };
-    // (@if_has_fields $if_code:block else $else_code:block) => {
-    //     $else_code
-    // };
-
-    (@parse_arg $parse_args:ident ($index:expr) char) => {
-        {
-            let Some(arg) = $parse_args.get($index) else {
-                // TODO: Handle this
-                return None;
-            };
-
-            let mut chars = arg.chars();
-            let Some(char) = chars.next() else {
-                return None;
-            };
-            if chars.next().is_some() {
-                return None;
-            }
-            char
-        }
-    };
-
-    (@parse_arg $parse_args:ident ($index:expr) String) => {
-        {
-            let Some(arg) = $parse_args.get($index) else {
-                // TODO: Handle this
-                return None;
-            };
-
-            arg.to_string()
-        }
-    };
 }
 
 // TODO: make action with args parseable
@@ -216,14 +198,22 @@ actions! {
             }
             MoveUp, "move_up";
             MoveDown, "move_down";
+
+            ExtendStartLeft, "extend_start_left";
+            ExtendStartRight, "extend_start_right";
+            ExtendStartUp, "extend_start_up";
+            ExtendStartDown, "extend_start_down";
+
             ExtendEndLeft, "extend_end_left";
             ExtendEndRight, "extend_end_right";
             ExtendEndUp, "extend_end_up";
             ExtendEndDown, "extend_end_down";
+
             MoveSelectionLeft, "move_selection_left";
             MoveSelectionRight, "move_selection_right";
             MoveSelectionUp, "move_selection_up";
             MoveSelectionDown, "move_selection_down";
+
             InsertLineBeforeCursor, "insert_line_before_cursor";
             pub Write, "write", "w";
         }
@@ -237,5 +227,30 @@ actions! {
         EnterSelectionMode, "enter_selection_mode";
         FocusCommandBar, "focus_command_bar";
         FocusEditor, "focus_editor";
+    }
+}
+
+trait ArgumentParse
+where
+    Self: Sized,
+{
+    fn parse(arg: &str) -> Option<Self>;
+}
+
+impl ArgumentParse for String {
+    fn parse(arg: &str) -> Option<Self> {
+        Some(arg.to_string())
+    }
+}
+impl ArgumentParse for char {
+    fn parse(arg: &str) -> Option<Self> {
+        let mut chars = arg.chars();
+        let Some(char) = chars.next() else {
+            return None;
+        };
+        if chars.next().is_some() {
+            return None;
+        }
+        Some(char)
     }
 }

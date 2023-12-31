@@ -139,14 +139,22 @@ impl Document {
             },
             MoveUp => self.selection.move_up(),
             MoveDown => self.selection.move_down(&self.lines),
+
             ExtendEndLeft => self.selection.extend_end_left(&self.lines),
             ExtendEndRight => self.selection.extend_end_right(&self.lines),
             ExtendEndUp => self.selection.extend_end_up(),
             ExtendEndDown => self.selection.extend_end_down(&self.lines),
+
+            ExtendStartLeft => self.selection.extend_start_left(&self.lines),
+            ExtendStartRight => self.selection.extend_start_left(&self.lines),
+            ExtendStartUp => self.selection.extend_start_left(&self.lines),
+            ExtendStartDown => self.selection.extend_start_left(&self.lines),
+
             MoveSelectionLeft => self.selection.move_selection_left(&self.lines),
             MoveSelectionRight => self.selection.move_selection_right(&self.lines),
             MoveSelectionUp => self.selection.move_selection_up(),
             MoveSelectionDown => self.selection.move_selection_down(&self.lines),
+
             InsertLineBeforeCursor => {
                 let true_start = self.selection.true_start(&self.lines);
 
