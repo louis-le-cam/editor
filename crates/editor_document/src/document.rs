@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use editor_action::DocumentAction;
@@ -9,8 +9,13 @@ use log::error;
 
 use crate::{selection::InternalSelection, Selection};
 
+pub enum DocumentName {
+    Scratch,
+    Path(PathBuf),
+}
+
 pub struct Document {
-    path: PathBuf,
+    name: DocumentName,
     lines: Vec<String>,
     selection: InternalSelection,
     dirty: bool,
@@ -27,8 +32,17 @@ impl Document {
         };
 
         Self {
+            name: DocumentName::Path(path),
             lines,
-            path,
+            selection: InternalSelection::new(),
+            dirty: false,
+        }
+    }
+
+    pub fn new_scratch() -> Self {
+        Self {
+            name: DocumentName::Scratch,
+            lines: Vec::new(),
             selection: InternalSelection::new(),
             dirty: false,
         }
@@ -48,8 +62,11 @@ impl Document {
         self.selection.to_selection(&self.lines)
     }
 
-    pub fn path(&self) -> &Path {
-        self.path.as_path()
+    pub fn display_name(&self) -> String {
+        match &self.name {
+            DocumentName::Scratch => "[scratch]".to_string(),
+            DocumentName::Path(path) => path.display().to_string(),
+        }
     }
 
     pub fn lines(&self) -> &Vec<String> {
@@ -154,15 +171,16 @@ impl Document {
                     return;
                 }
 
-                if let Err(err) = fs::write(&self.path, self.lines.join("\n")) {
-                    error!(
-                        "Failed to write document to {}, {:?}",
-                        self.path.display(),
-                        err
-                    );
-                } else {
-                    self.dirty = false;
-                };
+                match &self.name {
+                    DocumentName::Scratch => {}
+                    DocumentName::Path(path) => {
+                        if let Err(err) = fs::write(&path, self.lines.join("\n")) {
+                            error!("Failed to write document to {}, {:?}", path.display(), err);
+                        } else {
+                            self.dirty = false;
+                        };
+                    }
+                }
             }
         }
     }

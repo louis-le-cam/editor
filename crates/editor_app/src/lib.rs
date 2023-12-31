@@ -32,7 +32,7 @@ impl App {
             term: Term::new(),
             theme: Theme::default(),
             inputs: Inputs::default(),
-            editor: Editor::from_path("log.txt".into()),
+            editor: Editor::new_scratch(),
             command_bar: CommandBar::new(),
         }
     }

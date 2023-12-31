@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use editor_action::DocumentAction;
 use editor_document::Document;
 use editor_mode::Mode;
@@ -13,9 +11,9 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn from_path(path: PathBuf) -> Self {
+    pub fn new_scratch() -> Self {
         Self {
-            document: Document::from_path(path),
+            document: Document::new_scratch(),
             offset: (0, 0).into(),
         }
     }
@@ -92,7 +90,7 @@ impl Editor {
     fn draw_infos(&mut self, theme: &Theme, mut term: TermSlice, mode: Mode) {
         let mode_abreviation = mode.abreviation();
 
-        let path = self.document.path().display().to_string();
+        let path = self.document.display_name();
         let selection = self.document.selection();
 
         term.set_background_color(theme.code_info_background);
