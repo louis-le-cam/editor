@@ -101,21 +101,12 @@ impl Document {
 
                     line.insert(index, char);
 
-                    if true_start.1 == self.selection.true_end(&self.lines).1 {
-                        self.selection.move_selection_right(&self.lines);
-                    } else {
-                        self.selection.extend_start_right(&self.lines);
-                    }
+                    self.selection.move_selection_right(&self.lines);
 
                     self.dirty = true;
                 }
                 DeleteBefore => {
-                    self.selection.extend_start_left(&self.lines);
-                    if self.selection.true_start(&self.lines).1
-                        == self.selection.true_end(&self.lines).1
-                    {
-                        self.selection.extend_end_left(&self.lines);
-                    }
+                    self.selection.move_selection_left(&self.lines);
 
                     let true_start = self.selection.true_start(&self.lines);
 
@@ -128,7 +119,6 @@ impl Document {
                         if let Some(after_cursor) = (true_start.1 + 1 < self.lines.len())
                             .then(|| self.lines.remove(true_start.1 + 1))
                         {
-                            self.selection.extend_end_up();
                             self.lines
                                 .get_mut(true_start.1)
                                 .map(|line| line.push_str(&after_cursor));
@@ -158,6 +148,8 @@ impl Document {
             InsertLineBeforeCursor => {
                 let true_start = self.selection.true_start(&self.lines);
 
+                let selection_length = self.selection.len(&self.lines);
+
                 let line = self.get_line_mut(true_start.1);
 
                 let after_cursor = line.split_off(
@@ -169,8 +161,10 @@ impl Document {
 
                 self.lines.insert(true_start.1 + 1, after_cursor);
 
-                self.selection.extend_start_right(&self.lines);
-                self.selection.extend_end_down(&self.lines);
+                self.selection.move_selection_right(&self.lines);
+                for _ in 0..selection_length {
+                    self.selection.extend_end_right(&self.lines);
+                }
 
                 self.dirty = true;
             }

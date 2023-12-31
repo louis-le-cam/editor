@@ -54,10 +54,49 @@ impl InternalSelection {
         }
     }
 
+    pub fn len(&self, lines: &[String]) -> usize {
+        let (min, max) = self.true_min_max(lines);
+
+        (min.1..max.1 + 1).fold(0, |len, y| {
+            let Some(line) = lines.get(y) else {
+                return len;
+            };
+
+            if y == min.1 && y == max.1 {
+                len + line
+                    .chars()
+                    .skip(min.0)
+                    .take(max.0.saturating_sub(min.0))
+                    .count()
+            } else if y == min.1 {
+                len + line.chars().skip(min.0).count()
+            } else if y == max.1 {
+                len + line.chars().take(max.0).count()
+            } else {
+                len + line.chars().count()
+            }
+        })
+    }
+
     pub fn to_selection(&self, lines: &[String]) -> Selection {
         Selection {
             true_start: self.true_start(lines),
             true_end: self.true_end(lines),
+        }
+    }
+
+    fn true_min_max(&self, lines: &[String]) -> ((usize, usize), (usize, usize)) {
+        let true_start = self.true_start(lines);
+        let true_end = self.true_end(lines);
+
+        match true_start.1.cmp(&true_end.1) {
+            Ordering::Less => (true_start, true_end),
+            Ordering::Equal => match true_start.0.cmp(&true_end.0) {
+                Ordering::Less => (true_start, true_end),
+                Ordering::Equal => (true_start, true_end),
+                Ordering::Greater => (true_end, true_start),
+            },
+            Ordering::Greater => (true_end, true_start),
         }
     }
 
