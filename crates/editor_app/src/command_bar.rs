@@ -65,7 +65,8 @@ impl CommandBar {
     }
 
     pub fn validate(&mut self) -> Option<Action> {
-        let action = Action::parse(&self.document.line());
+        let action = Action::parse(&self.document.line())
+            .and_then(|action| action.is_public().then_some(action));
         self.document.clear();
         action
     }
