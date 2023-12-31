@@ -9,7 +9,7 @@ macro_rules! actions {
         { $($current_enum:tt)* }
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
-        { $parse_string:ident $($parse:tt)* }
+        { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         $variant:ident => enum $inner_enum_name:ident {
             $($body:tt)*
@@ -17,13 +17,13 @@ macro_rules! actions {
         $($tail:tt)*
     ) => {
         actions!{@elements
-            { actions!{@elements { $($code)* } {$($enum_pile $variant_pile)* $enum_name $variant} {} {} {} {$parse_string} $inner_enum_name $($body)* } }
+            { actions!{@elements { $($code)* } {$($enum_pile $variant_pile)* $enum_name $variant} {} {} {} {$parse_args} $inner_enum_name $($body)* } }
             { $($enum_pile $variant_pile)* }
             { $($current_enum)* $variant($inner_enum_name),}
             { $($as_strs)* Self::$variant(action) => action.as_strs(), }
             { $($is_public)*}
-            { $parse_string $($parse)* {
-                if let Some(action) = $inner_enum_name::parse($parse_string) {
+            { $parse_args $($parse)* {
+                if let Some(action) = $inner_enum_name::parse_from_args($parse_args) {
                     return Some(Self::$variant(action));
                 }
             } }
@@ -37,7 +37,7 @@ macro_rules! actions {
         { $($current_enum:tt)* }
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
-        { $parse_string:ident $($parse:tt)* }
+        { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         pub $variant:ident $({
             $($field:ident : $field_ty:ty),*
@@ -52,7 +52,7 @@ macro_rules! actions {
             })?, }
             { $($as_strs)* Self::$variant $({$($field: _),*})? => &[$($string),*], }
             { $($is_public)* Self::$variant $({$($field: _)*})? => true,}
-            { $parse_string $($parse)* if $($parse_string.trim() == $string)||* {
+            { $parse_args $($parse)* if matches!($parse_args.get(0), $(Some(&$string))|+) {
                 actions!(@if_has_fields $(($($field)*))? {} else {
                   return Some(Self::$variant);
                 });
@@ -67,7 +67,7 @@ macro_rules! actions {
         { $($current_enum:tt)* }
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
-        { $parse_string:ident $($parse:tt)* }
+        { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         $variant:ident $({
             $($field:ident : $field_ty:ty),*
@@ -82,7 +82,7 @@ macro_rules! actions {
             })?, }
             { $($as_strs)* Self::$variant $({$($field: _),*})? => &[$($string),*], }
             { $($is_public)*}
-            { $parse_string $($parse)* if $($parse_string.trim() == $string)||* {
+            { $parse_args $($parse)* if matches!($parse_args.get(0), $(Some(&$string))|+) {
                 actions!(@if_has_fields $(($($field)*))? {} else {
                   return Some(Self::$variant);
                 });
@@ -98,7 +98,7 @@ macro_rules! actions {
         { $($current_enum:tt)* }
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
-        { $parse_string:ident $($parse:tt)* }
+        { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
     ) => {
         #[derive(Clone, Copy, Debug)]
@@ -120,7 +120,11 @@ macro_rules! actions {
                 }
             }
 
-            pub fn parse($parse_string: &str) -> Option<Self> {
+            pub fn parse(string: &str) -> Option<Self> {
+                Self::parse_from_args(&string.split_whitespace().collect())
+            }
+
+            fn parse_from_args($parse_args: &Vec<&str>) -> Option<Self> {
                 $($parse)*
 
                 None
