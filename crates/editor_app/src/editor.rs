@@ -8,7 +8,7 @@ use editor_theme::Theme;
 use glam::{u16vec2, U16Vec2};
 
 pub struct Editor {
-    document: Document,
+    pub document: Document,
     offset: (usize, usize),
 }
 

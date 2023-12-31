@@ -21,7 +21,7 @@ macro_rules! actions {
             { $($enum_pile $variant_pile)* }
             { $($current_enum)* $variant($inner_enum_name),}
             { $($as_strs)* Self::$variant(action) => action.as_strs(), }
-            { $($is_public)*}
+            { $($is_public)* Self::$variant(action) => action.is_public(), }
             { $parse_args $($parse)* {
                 if let Some(action) = $inner_enum_name::parse_from_args($parse_args) {
                     return Some(Self::$variant(action));
@@ -40,7 +40,7 @@ macro_rules! actions {
         { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         pub $variant:ident $({
-            $($field:ident : $field_ty:ty),*
+            $($field:ident : $field_ty:ident),*
         })? $(,$string:literal)+;
         $($tail:tt)*
     ) => {
@@ -53,9 +53,9 @@ macro_rules! actions {
             { $($as_strs)* Self::$variant $({$($field: _),*})? => &[$($string),*], }
             { $($is_public)* Self::$variant $({$($field: _)*})? => true,}
             { $parse_args $($parse)* if matches!($parse_args.get(0), $(Some(&$string))|+) {
-                actions!(@if_has_fields $(($($field)*))? {} else {
-                  return Some(Self::$variant);
-                });
+                #[allow(unused_variables, unused_mut)]
+                let mut arg_index = 0;
+                return Some(Self::$variant $({$($field: actions!(@parse_arg $parse_args ({arg_index += 1; arg_index}) $field_ty))*})?);
             } }
             $enum_name $($tail)*
         }
@@ -70,7 +70,7 @@ macro_rules! actions {
         { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
         $variant:ident $({
-            $($field:ident : $field_ty:ty),*
+            $($field:ident : $field_ty:ident),*
         })? $(,$string:literal),+;
         $($tail:tt)*
     ) => {
@@ -83,9 +83,9 @@ macro_rules! actions {
             { $($as_strs)* Self::$variant $({$($field: _),*})? => &[$($string),*], }
             { $($is_public)*}
             { $parse_args $($parse)* if matches!($parse_args.get(0), $(Some(&$string))|+) {
-                actions!(@if_has_fields $(($($field)*))? {} else {
-                  return Some(Self::$variant);
-                });
+                #[allow(unused_variables, unused_mut)]
+                let mut arg_index = 0;
+                return Some(Self::$variant $({$($field: actions!(@parse_arg $parse_args ({arg_index += 1; arg_index}) $field_ty))*})?);
             } }
             $enum_name
             $($tail)*
@@ -101,7 +101,7 @@ macro_rules! actions {
         { $parse_args:ident $($parse:tt)* }
         $enum_name:ident
     ) => {
-        #[derive(Clone, Copy, Debug)]
+        #[derive(Clone, Debug)]
         pub enum $enum_name {
             $($current_enum)*
         }
@@ -167,11 +167,40 @@ macro_rules! actions {
         $value
     };
 
-    (@if_has_fields ($($field:ident)*) $if_code:block else $else_code:block) => {
-        $if_code
+    // (@if_has_fields ($($field:ident)*) $if_code:block else $else_code:block) => {
+    //     $if_code
+    // };
+    // (@if_has_fields $if_code:block else $else_code:block) => {
+    //     $else_code
+    // };
+
+    (@parse_arg $parse_args:ident ($index:expr) char) => {
+        {
+            let Some(arg) = $parse_args.get($index) else {
+                // TODO: Handle this
+                return None;
+            };
+
+            let mut chars = arg.chars();
+            let Some(char) = chars.next() else {
+                return None;
+            };
+            if chars.next().is_some() {
+                return None;
+            }
+            char
+        }
     };
-    (@if_has_fields $if_code:block else $else_code:block) => {
-        $else_code
+
+    (@parse_arg $parse_args:ident ($index:expr) String) => {
+        {
+            let Some(arg) = $parse_args.get($index) else {
+                // TODO: Handle this
+                return None;
+            };
+
+            arg.to_string()
+        }
     };
 }
 
@@ -196,9 +225,10 @@ actions! {
             MoveSelectionUp, "move_selection_up";
             MoveSelectionDown, "move_selection_down";
             InsertLineBeforeCursor, "insert_line_before_cursor";
-            Write, "write";
+            pub Write, "write", "w";
         }
         pub Quit, "quit", "q";
+        pub Open{path: String}, "open", "o";
         Validate, "validate";
         Cancel, "cancel";
         EnterNormalMode, "enter_normal_mode";

@@ -115,6 +115,10 @@ impl App {
                 },
             },
             Quit => self.should_quit = true,
+            Open { path } => {
+                self.editor.document = editor_document::Document::from_path(path.into());
+                self.draw();
+            }
             Validate => match self.focused {
                 Focused::Editor => {
                     warn!("Validate command does nothing when editor is focused")
