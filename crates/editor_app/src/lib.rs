@@ -110,7 +110,7 @@ impl App {
             },
             Quit => self.should_quit = true,
             Open { path } => {
-                self.editor.document = editor_document::Document::from_path(path.into());
+                self.editor = Editor::from_path(path.into());
                 self.draw();
             }
             Redraw => self.draw(),

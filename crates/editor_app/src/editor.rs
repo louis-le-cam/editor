@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use editor_action::DocumentAction;
 use editor_document::Document;
 use editor_mode::Mode;
@@ -14,6 +16,13 @@ impl Editor {
     pub fn new_scratch() -> Self {
         Self {
             document: Document::new_scratch(),
+            offset: (0, 0).into(),
+        }
+    }
+
+    pub fn from_path(path: PathBuf) -> Self {
+        Self {
+            document: Document::from_path(path),
             offset: (0, 0).into(),
         }
     }
