@@ -51,25 +51,20 @@ impl App {
     }
 
     fn draw(&mut self) {
-        self.draw_editor();
-        self.draw_command_bar();
-    }
-
-    fn draw_editor(&mut self) {
         self.editor
             .draw(&self.theme, self.term.slice(self.editor_rect()), self.mode);
-    }
-
-    fn draw_command_bar(&mut self) {
-        self.command_bar.draw(
-            &self.theme,
-            self.focused,
-            self.term.slice(self.command_bar_rect()),
-        );
+        if self.focused == Focused::CommandBar {
+            self.command_bar
+                .draw(&self.theme, self.term.slice(self.command_bar_rect()));
+        }
     }
 
     fn editor_rect(&self) -> TermRect {
-        TermRect::new((0, 0), self.term.size().saturating_sub(u16vec2(0, 1)))
+        if self.focused == Focused::CommandBar {
+            TermRect::new((0, 0), self.term.size().saturating_sub(u16vec2(0, 1)))
+        } else {
+            TermRect::new((0, 0), self.term.size())
+        }
     }
 
     fn command_bar_rect(&self) -> TermRect {
@@ -105,7 +100,6 @@ impl App {
                 Focused::CommandBar => match action {
                     SingleLine(action) => self.command_bar.handle_action(
                         &self.theme,
-                        self.focused,
                         self.term.slice(self.command_bar_rect()),
                         action,
                     ),
@@ -141,15 +135,15 @@ impl App {
             },
             EnterNormalMode => {
                 self.mode = Mode::Normal;
-                self.draw_editor();
+                self.draw();
             }
             EnterInsertMode => {
                 self.mode = Mode::Insert;
-                self.draw_editor();
+                self.draw();
             }
             EnterSelectionMode => {
                 self.mode = Mode::Selection;
-                self.draw_editor();
+                self.draw();
             }
             FocusCommandBar => {
                 self.focused = Focused::CommandBar;
