@@ -106,7 +106,10 @@ impl Document {
                     self.dirty = true;
                 }
                 DeleteBefore => {
-                    self.selection.move_selection_left(&self.lines);
+                    let selection_length = self.selection.len(&self.lines);
+                    // FIXME: Doesn't work with selections because we delete the character at the start and move_left collapse to the end
+                    // To fix, should probably make the selection in a specific direction when entering insert mode like helix does
+                    self.selection.move_left(&self.lines);
 
                     let true_start = self.selection.true_start(&self.lines);
 
@@ -124,6 +127,10 @@ impl Document {
                                 .map(|line| line.push_str(&after_cursor));
                             self.dirty = true;
                         }
+                    }
+
+                    for _ in 0..selection_length {
+                        self.selection.extend_end_right(&self.lines);
                     }
                 }
             },
