@@ -1,6 +1,8 @@
+use editor_fuzzy::fuzzy_score;
+
 macro_rules! actions {
     ( enum Action { $($content:tt)* } ) => {
-        actions!{ @elements {} {} {} {} {} { parse_string } Action $($content)* }
+        actions!{ @elements {} {} {} {} {} { parse_string } { fuzzy_vec fuzzy_str } Action $($content)* }
     };
 
     (@elements
@@ -10,6 +12,7 @@ macro_rules! actions {
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
         { $parse_args:ident $($parse:tt)* }
+        { $fuzzy_vec:ident $fuzzy_str:ident $($fuzzy_match:tt)* }
         $enum_name:ident
         $variant:ident => enum $inner_enum_name:ident {
             $($body:tt)*
@@ -17,7 +20,7 @@ macro_rules! actions {
         $($tail:tt)*
     ) => {
         actions!{@elements
-            { actions!{@elements { $($code)* } {$($enum_pile $variant_pile)* $enum_name $variant} {} {} {} {$parse_args} $inner_enum_name $($body)* } }
+            { actions!{@elements { $($code)* } {$($enum_pile $variant_pile)* $enum_name $variant} {} {} {} {$parse_args} {$fuzzy_vec $fuzzy_str} $inner_enum_name $($body)* } }
             { $($enum_pile $variant_pile)* }
             { $($current_enum)* $variant($inner_enum_name),}
             { $($as_strs)* Self::$variant(action) => action.as_strs(), }
@@ -26,6 +29,9 @@ macro_rules! actions {
                 if let Some(action) = $inner_enum_name::parse_from_args($parse_args) {
                     return Some(Self::$variant(action));
                 }
+            } }
+            { $fuzzy_vec $fuzzy_str $($fuzzy_match)* {
+                $fuzzy_vec.extend_from_slice(&$inner_enum_name::fuzzy_scores($fuzzy_str));
             } }
             $enum_name $($tail)*
         }
@@ -38,6 +44,7 @@ macro_rules! actions {
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
         { $parse_args:ident $($parse:tt)* }
+        { $fuzzy_vec:ident $fuzzy_str:ident $($fuzzy_match:tt)* }
         $enum_name:ident
         pub $variant:ident $({
             $($field:ident : $field_ty:ty),*
@@ -66,6 +73,9 @@ macro_rules! actions {
                         })*
                 })?);
             } }
+            { $fuzzy_vec $fuzzy_str $($fuzzy_match)* {
+                $( $fuzzy_vec.push((fuzzy_score($fuzzy_str, $string), $string)); )*
+            } }
             $enum_name $($tail)*
         }
     };
@@ -77,6 +87,7 @@ macro_rules! actions {
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
         { $parse_args:ident $($parse:tt)* }
+        { $fuzzy_vec:ident $fuzzy_str:ident $($fuzzy_match:tt)* }
         $enum_name:ident
         $variant:ident $({
             $($field:ident : $field_ty:ty),*
@@ -105,6 +116,7 @@ macro_rules! actions {
                         })*
                 })?);
             } }
+            { $fuzzy_vec $fuzzy_str $($fuzzy_match)* }
             $enum_name
             $($tail)*
         }
@@ -117,6 +129,7 @@ macro_rules! actions {
         { $($as_strs:tt)* }
         { $($is_public:tt)* }
         { $parse_args:ident $($parse:tt)* }
+        { $fuzzy_vec:ident $fuzzy_str:ident $($fuzzy_match:tt)* }
         $enum_name:ident
     ) => {
         #[derive(Clone, Debug)]
@@ -146,6 +159,24 @@ macro_rules! actions {
                 $($parse)*
 
                 None
+            }
+
+            pub fn fuzzy_ordered(fuzzy_str: &str) -> Vec<&'static str> {
+                let mut fuzzy_scores = Self::fuzzy_scores(fuzzy_str);
+                fuzzy_scores.sort_unstable_by_key(|(score, _)| *score);
+
+                fuzzy_scores.into_iter().map(|(_, string)| string).collect()
+            }
+
+
+            #[allow(unused_variables)]
+            pub fn fuzzy_scores($fuzzy_str: &str) -> Vec<(u32, &'static str)> {
+                #[allow(unused_mut)]
+                let mut $fuzzy_vec = Vec::new();
+
+                $($fuzzy_match)*
+
+                $fuzzy_vec
             }
         }
 
@@ -254,3 +285,5 @@ impl ArgumentParse for char {
         Some(char)
     }
 }
+
+pub fn t() {}

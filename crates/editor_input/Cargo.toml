@@ -7,4 +7,3 @@ version = "0.1.0"
 editor_terminal = { path = "../editor_terminal" }
 editor_mode = { path = "../editor_mode" }
 editor_action = { path = "../editor_action" }
-log = "0.4.20"
