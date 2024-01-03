@@ -202,15 +202,8 @@ impl Editor {
         }
     }
 
-    pub fn handle_action(
-        &mut self,
-        theme: &Theme,
-        term: TermSlice,
-        mode: Mode,
-        action: DocumentAction,
-    ) {
+    pub fn handle_action(&mut self, action: DocumentAction) {
         self.document.handle_action(action);
-        self.draw(theme, term, mode);
     }
 
     /// Update `self.offset` if `self.document.cursor()` is near edges

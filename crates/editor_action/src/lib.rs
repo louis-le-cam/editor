@@ -165,7 +165,7 @@ macro_rules! actions {
                 let mut fuzzy_scores = Self::fuzzy_scores(fuzzy_str);
                 fuzzy_scores.sort_unstable_by_key(|(score, _)| *score);
 
-                fuzzy_scores.into_iter().map(|(_, string)| string).collect()
+                fuzzy_scores.into_iter().rev().map(|(_, string)| string).collect()
             }
 
 

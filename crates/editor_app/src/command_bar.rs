@@ -1,6 +1,6 @@
 use editor_action::{Action, SingleLineDocumentAction};
 use editor_document::SingleLineDocument;
-use editor_terminal::TermSlice;
+use editor_terminal::{TermRect, TermSlice};
 use editor_theme::Theme;
 
 pub struct CommandBar {
@@ -15,6 +15,46 @@ impl CommandBar {
     }
 
     pub fn draw(&mut self, theme: &Theme, mut term: TermSlice) {
+        self.draw_suggestions(
+            theme,
+            term.slice(TermRect::new(
+                (0, 0),
+                (term.rect().width(), term.rect().heigth().saturating_sub(1)),
+            )),
+        );
+
+        self.draw_line(
+            theme,
+            term.slice(TermRect::new(
+                (0, term.rect().heigth().saturating_sub(1)),
+                (term.rect().width(), 1),
+            )),
+        );
+    }
+
+    fn draw_suggestions(&self, theme: &Theme, mut term: TermSlice) {
+        if self.document.line().chars().any(|ch| ch.is_whitespace()) {
+            return;
+        }
+
+        term.set_background_color(theme.command_suggestion_background);
+        term.set_text_color(theme.command_suggestion_text);
+
+        let suggestions = Action::fuzzy_ordered(self.document.line());
+
+        for y in 0..term.rect().heigth() {
+            term.write_to(
+                (0, y),
+                &suggestions[y as usize]
+                    .chars()
+                    .chain(std::iter::repeat(' '))
+                    .take(term.rect().width() as usize)
+                    .collect::<String>(),
+            );
+        }
+    }
+
+    fn draw_line(&self, theme: &Theme, mut term: TermSlice) {
         term.set_background_color(theme.command_bar_background);
 
         let text = format!(
@@ -70,13 +110,7 @@ impl CommandBar {
         self.document.clear();
     }
 
-    pub fn handle_action(
-        &mut self,
-        theme: &Theme,
-        term: TermSlice,
-        document_action: SingleLineDocumentAction,
-    ) {
+    pub fn handle_action(&mut self, document_action: SingleLineDocumentAction) {
         self.document.handle_action(document_action);
-        self.draw(theme, term);
     }
 }

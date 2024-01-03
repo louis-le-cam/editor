@@ -68,9 +68,11 @@ impl App {
     }
 
     fn command_bar_rect(&self) -> TermRect {
+        let y = self.term.size().y.saturating_sub(6);
+
         TermRect::new(
-            (0, self.term.size().y.saturating_sub(1)),
-            u16vec2(self.term.size().x, 1),
+            (0, y),
+            u16vec2(self.term.size().x, self.term.size().y.saturating_sub(y)),
         )
     }
 
@@ -91,18 +93,15 @@ impl App {
 
         match action {
             Document(action) => match self.focused {
-                Focused::Editor => self.editor.handle_action(
-                    &self.theme,
-                    self.term.slice(self.editor_rect()),
-                    self.mode,
-                    action,
-                ),
+                Focused::Editor => {
+                    self.editor.handle_action(action);
+                    self.draw();
+                }
                 Focused::CommandBar => match action {
-                    SingleLine(action) => self.command_bar.handle_action(
-                        &self.theme,
-                        self.term.slice(self.command_bar_rect()),
-                        action,
-                    ),
+                    SingleLine(action) => {
+                        self.command_bar.handle_action(action);
+                        self.draw();
+                    }
                     action => {
                         warn!("Unexpected multiline document action ({:?}) used while command bar focused (ignored)", action);
                     }

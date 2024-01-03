@@ -29,8 +29,8 @@ impl TermSlice {
     /// Create a new slice from this one
     /// `rect` is relative to the slice rect
     pub fn slice(&mut self, mut rect: TermRect) -> Self {
-        rect.pos += self.rect.pos;
         rect.size = rect.size.min(self.rect.size.saturating_sub(rect.pos));
+        rect.pos += self.rect.pos;
 
         Self {
             stdout: stdout(),

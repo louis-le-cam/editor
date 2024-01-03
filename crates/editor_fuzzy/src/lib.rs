@@ -1,5 +1,3 @@
-use log::info;
-
 pub fn fuzzy_score(string1: &str, string2: &str) -> u32 {
     let mut score = 0;
 
@@ -15,7 +13,6 @@ pub fn fuzzy_score(string1: &str, string2: &str) -> u32 {
                 loop {
                     let char1 = chars1.next();
                     let char2 = chars2.next();
-                    info!("{char1:?} - {char2:?}");
 
                     if char1.is_none() && char2.is_none() {
                         score += l as u32 + 1;
