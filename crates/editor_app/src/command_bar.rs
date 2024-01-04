@@ -45,7 +45,9 @@ impl CommandBar {
         for y in 0..term.rect().heigth() {
             term.write_to(
                 (0, y),
-                &suggestions[y as usize]
+                &suggestions
+                    .get(y as usize)
+                    .unwrap_or(&"")
                     .chars()
                     .chain(std::iter::repeat(' '))
                     .take(term.rect().width() as usize)

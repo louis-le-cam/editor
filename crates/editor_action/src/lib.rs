@@ -1,4 +1,4 @@
-use editor_fuzzy::fuzzy_score;
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 
 macro_rules! actions {
     ( enum Action { $($content:tt)* } ) => {
@@ -73,9 +73,15 @@ macro_rules! actions {
                         })*
                 })?);
             } }
-            { $fuzzy_vec $fuzzy_str $($fuzzy_match)* {
-                $( $fuzzy_vec.push((fuzzy_score($fuzzy_str, $string), $string)); )*
-            } }
+            { $fuzzy_vec $fuzzy_str $($fuzzy_match)* {$(
+                    if let Some(score) = SkimMatcherV2::default().fuzzy_match(
+                        $fuzzy_str,
+                        &$string[0..$string.char_indices().nth($fuzzy_str.chars().count()).map(|(i, _)| i).unwrap_or($string.len())])
+                    {
+                        $fuzzy_vec.push((score, $string));
+                    }
+                )*}
+            }
             $enum_name $($tail)*
         }
     };
@@ -170,7 +176,7 @@ macro_rules! actions {
 
 
             #[allow(unused_variables)]
-            pub fn fuzzy_scores($fuzzy_str: &str) -> Vec<(u32, &'static str)> {
+            pub fn fuzzy_scores($fuzzy_str: &str) -> Vec<(i64, &'static str)> {
                 #[allow(unused_mut)]
                 let mut $fuzzy_vec = Vec::new();
 
@@ -285,5 +291,3 @@ impl ArgumentParse for char {
         Some(char)
     }
 }
-
-pub fn t() {}

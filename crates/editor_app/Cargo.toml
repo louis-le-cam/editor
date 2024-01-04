@@ -10,6 +10,6 @@ editor_theme = { path = "../editor_theme" }
 editor_mode = { path = "../editor_mode" }
 editor_input = { path = "../editor_input" }
 editor_action = { path = "../editor_action" }
-editor_fuzzy = { path = "../editor_fuzzy" }
+fuzzy-matcher = "0.3.7"
 log = "0.4.20"
 glam = "0.25.0"
